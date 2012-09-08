@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
@@ -97,7 +97,7 @@ countLines = foldl' count' 0
     where
         count' acc l = case AL.maybeResult $ AL.parse line l of
             Just x  -> acc + 1
-            Nothing -> trace("no parse result") acc
+            Nothing -> acc
 
 
 protocolCount :: [L.ByteString] -> [(S.ByteString,Integer)]
@@ -118,10 +118,10 @@ main = do
   dispatch cmd path
 
 dispatch :: Command -> FilePath -> IO ()
-dispatch cmd path = action path
+dispatch cmd = action
     where
         action = fromMaybe err (lookup cmd actions)
-        err    = \_ -> putStrLn $ "Error: " ++ cmd ++ " is not a valid command."
+        err _  = putStrLn $ "Error: " ++ cmd ++ " is not a valid command."
 
 actions :: [(Command, FilePath -> IO ())]
 actions = [("count", countLogFileLines)
