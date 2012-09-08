@@ -133,10 +133,14 @@ actions = [("count", countLogFileLines)
           ,("protocol", mapToTopList protocolCount)]
 
 showParsedLines :: FilePath -> IO()
-showParsedLines path = print . showLines . L.lines =<< L.readFile path
+showParsedLines path = parseAndPrint path showLines
 
 countLogFileLines :: FilePath -> IO ()
-countLogFileLines path = print . countLines . L.lines =<< L.readFile path
+countLogFileLines path = parseAndPrint path countLines
+
+parseAndPrint :: (Show a) => FilePath -> ([L.ByteString] -> a) -> IO ()
+parseAndPrint path f = print . f . L.lines =<< L.readFile path
+
 
 mapToTopList :: ([L.ByteString] -> [(S.ByteString, Integer)]) -> FilePath -> IO ()
 mapToTopList f p = do
