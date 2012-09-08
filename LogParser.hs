@@ -52,10 +52,9 @@ x           = satisfy (== 'x')
 
 logEntry :: Parser S.ByteString
 logEntry = do
-   entry <- takeTill (== '|')
-   pipe
+   entry <- manyTill anyChar (try (string " |"))
    space
-   return entry
+   return $ S.pack entry
 
 -- | i8x1401519x6 |
 parseRequestId :: Parser RequestId
