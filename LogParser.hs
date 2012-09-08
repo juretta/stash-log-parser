@@ -98,6 +98,13 @@ countLines = foldl' count' 0
             Just x  -> acc + 1
             Nothing -> acc
 
+maxConcurrent:: [L.ByteString] -> Integer
+maxConcurrent = foldl' count' 0
+    where
+        count' acc l = case AL.maybeResult $ AL.parse line l of
+            Just x  -> let conn = getConcurrentRequests $ getRequestId x
+                       in if conn >= acc then conn else acc
+            Nothing -> acc
 
 protocolCount :: [L.ByteString] -> [(S.ByteString,Integer)]
 protocolCount = M.toList . foldl' count M.empty
@@ -129,6 +136,7 @@ dispatch cmd = action
 actions :: [(Command, FilePath -> IO ())]
 actions = [("count", countLogFileLines)
           ,("show", showParsedLines)
+          ,("maxConn", showMaxConcurrent)
           ,("protocol", mapToTopList protocolCount)]
 
 showParsedLines :: FilePath -> IO()
@@ -136,6 +144,10 @@ showParsedLines path = parseAndPrint path showLines
 
 countLogFileLines :: FilePath -> IO ()
 countLogFileLines path = parseAndPrint path countLines
+
+showMaxConcurrent :: FilePath -> IO ()
+showMaxConcurrent path = parseAndPrint path maxConcurrent
+
 
 parseAndPrint :: (Show a) => FilePath -> ([L.ByteString] -> a) -> IO ()
 parseAndPrint path f = print . f . L.lines =<< L.readFile path
