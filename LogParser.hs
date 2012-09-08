@@ -107,6 +107,10 @@ protocolCount = M.toList . foldl' count M.empty
                 Just x -> M.insertWith (+) (S.copy (getProtocol x)) 1 acc
                 Nothing -> acc
 
+showLines :: [L.ByteString] -> [Maybe LogLine]
+showLines lines = take 5 $ map p_ lines
+            where p_ = \x -> AL.maybeResult $ AL.parse line x
+
 pretty :: Show a => Integer -> (a, Integer) -> String
 pretty i (bs, n) = printf "%d: %s, %d" i (show bs) n
 
@@ -125,7 +129,11 @@ dispatch cmd = action
 
 actions :: [(Command, FilePath -> IO ())]
 actions = [("count", countLogFileLines)
+          ,("show", showParsedLines)
           ,("protocol", mapToTopList protocolCount)]
+
+showParsedLines :: FilePath -> IO()
+showParsedLines path = print . showLines . L.lines =<< L.readFile path
 
 countLogFileLines :: FilePath -> IO ()
 countLogFileLines path = print . countLines . L.lines =<< L.readFile path
