@@ -121,8 +121,10 @@ pretty i (bs, n) = printf "%d: %s, %d" i (show bs) n
 
 main :: IO ()
 main = do
-  [cmd,path] <- getArgs
-  dispatch cmd path
+  args <- getArgs
+  case args of
+    [cmd, path] -> dispatch cmd path
+    _ -> error "Invoke with <cmd> <path-to-log-file>"
 
 dispatch :: Command -> FilePath -> IO ()
 dispatch cmd = action
