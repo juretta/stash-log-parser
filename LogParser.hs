@@ -93,11 +93,7 @@ line = do
                     action details labels duration sessionId
 
 countLines :: [L.ByteString] -> Integer
-countLines = foldl' count' 0
-    where
-        count' acc l = case AL.maybeResult $ AL.parse line l of
-            Just x  -> acc + 1
-            Nothing -> acc
+countLines = fromIntegral . length
 
 maxConcurrent:: [L.ByteString] -> Integer
 maxConcurrent = foldl' count' 0
