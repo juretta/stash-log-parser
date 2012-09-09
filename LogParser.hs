@@ -115,7 +115,7 @@ protocolCount = M.toList . foldl' count M.empty
 
 showLines :: [L.ByteString] -> [Maybe LogLine]
 showLines lines = take 5 $ map p_ lines
-            where p_ = \x -> AL.maybeResult $ AL.parse line x
+            where p_ x = AL.maybeResult $ AL.parse line x
 
 pretty :: Show a => Integer -> (a, Integer) -> String
 pretty i (bs, n) = printf "%d: %s, %d" i (show bs) n
