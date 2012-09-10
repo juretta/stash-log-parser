@@ -11,7 +11,7 @@ set yrange [0:*]
 set grid
 set xlabel "Date"
 set ylabel "Connections"
-set title "Concurrent Connections"
+set title "Concurrent Connections per hour"
 set format x "%d %b"
 set key left top
-plot "plot-data.data" using 1:2 with lines lw 2 lt 3 title "max conn connections"
+plot "plot-all" using 1:2 with lines lw 2 lt 3 title "max concurrent connections"
