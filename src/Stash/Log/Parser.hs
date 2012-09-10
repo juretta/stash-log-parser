@@ -1,23 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Main where
+module Stash.Log.Parser where
 
 import qualified Data.Attoparsec.Lazy as AL
 import qualified Data.HashMap.Strict as M
 import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Lazy.Char8 as L
-import Data.Attoparsec.Char8 hiding (space, take)
-import Control.Monad (liftM)
-import System.Environment (getArgs)
+import Data.Attoparsec.Char8 hiding (char, space, take)
 import Prelude hiding (takeWhile)
-import Data.List (sortBy, foldl')
+import Data.List (foldl')
 import Text.Printf (printf)
-import Data.Maybe (fromMaybe)
 import Data.ByteString.Char8 (readInteger)
-import System.Time.ParseDate (parseCalendarTime)
-import System.Time
-import System.Locale
-import Debug.Trace
 
 type Command = String
 
@@ -92,11 +85,11 @@ logEntry = do
 -- | i8x1401519x6 |
 parseRequestId :: Parser RequestId
 parseRequestId = do
-    which <- satisfy (\x -> x == 'i' || x == 'o')
-    minutes <- takeTill (== 'x')
-    _ <- x
+    which <- satisfy (\c -> c == 'i' || c == 'o')
+    _ <- takeTill (== 'x')
+    x
     counter <- takeTill (== 'x')
-    _ <- x
+    x
     concurrent <- takeTill (== ' ')
     space
     pipe
@@ -127,25 +120,25 @@ line = do
 -- Two LogDates are considered equal if every field apart from the millis field
 -- matches
 logDateEq :: LogDate -> LogDate -> Bool
-logDateEq a b = (getYear a) == (getYear b) &&
-                (getMonth a) == (getMonth b) &&
-                (getDay a) == (getDay b) &&
-                (getHour a) == (getHour b) &&
-                (getMinute a) == (getMinute b) &&
-                (getSeconds a) == (getSeconds b)
+logDateEq a b = getYear a == (getYear b) &&
+                getMonth a == (getMonth b) &&
+                getDay a == (getDay b) &&
+                getHour a == (getHour b) &&
+                getMinute a == (getMinute b) &&
+                getSeconds a == (getSeconds b)
 
 logDateEqMin :: LogDate -> LogDate -> Bool
-logDateEqMin a b = (getYear a) == (getYear b) &&
-                (getMonth a) == (getMonth b) &&
-                (getDay a) == (getDay b) &&
-                (getHour a) == (getHour b) &&
-                (getMinute a) == (getMinute b)
+logDateEqMin a b = getYear a == (getYear b) &&
+                getMonth a == (getMonth b) &&
+                getDay a == (getDay b) &&
+                getHour a == (getHour b) &&
+                getMinute a == (getMinute b)
 
 logDateEqHour :: LogDate -> LogDate -> Bool
-logDateEqHour a b = (getYear a) == (getYear b) &&
-                (getMonth a) == (getMonth b) &&
-                (getDay a) == (getDay b) &&
-                (getHour a) == (getHour b)
+logDateEqHour a b = getYear a == (getYear b) &&
+                getMonth a == (getMonth b) &&
+                getDay a == (getDay b) &&
+                getHour a == (getHour b)
 
 -- 2012-08-22 18:32:08,505
 {-parseDate :: String -> Maybe CalendarTime-}
@@ -158,26 +151,16 @@ maxConcurrent:: [L.ByteString] -> Integer
 maxConcurrent = foldl' count' 0
     where
         count' acc l = case AL.maybeResult $ AL.parse line l of
-            Just x  -> let conn = getConcurrentRequests $ getRequestId x
+            Just logLine -> let conn = getConcurrentRequests $ getRequestId logLine
                        in if conn >= acc then conn else acc
-            Nothing -> acc
+            Nothing      -> acc
 
 protocolCount :: [L.ByteString] -> [(S.ByteString,Integer)]
-protocolCount = M.toList . foldl' count M.empty
+protocolCount = M.toList . foldl' count' M.empty
         where
-            count acc l = case AL.maybeResult $ AL.parse line l of
-                Just x -> M.insertWith (+) (S.copy (getProtocol x)) 1 acc
-                Nothing -> acc
-
-mapIfJust :: (a -> Maybe b) -> [a] -> [b]
-mapIfJust f []      = []
-mapIfJust f (x:xs)  = case f x of
-                      Just x -> x : mapIfJust f xs
-                      Nothing -> mapIfJust f xs
-
-safehead :: [a] -> Maybe a
-safehead [] = Nothing
-safehead (x:xs) = Just x
+            count' acc l = case AL.maybeResult $ AL.parse line l of
+                Just logLine -> M.insertWith (+) (S.copy (getProtocol logLine)) 1 acc
+                Nothing      -> acc
 
 -- The concurrent connection data needs to be aggregated.
 -- Example
@@ -187,32 +170,23 @@ safehead (x:xs) = Just x
 -- 2012-08-22 18:32:08,505 4
 -- ...
 -- Should be aggregated on a second level with the max num
-plotDataConcurrentConn :: [L.ByteString] -> [(LogDate, Integer)]
-plotDataConcurrentConn input = mapIfJust f input
-        where
-            f l = case AL.maybeResult $ AL.parse line l of
-                Just x -> let conn = getConcurrentRequests $ getRequestId x
-                              dateTime = getDate x
-                          in Just (dateTime, conn)
-                Nothing -> Nothing
-
 plotDataConcurrentConn' :: [L.ByteString] -> [(LogDate, Integer)]
 plotDataConcurrentConn' inxs = reverse $ snd $ foldl' f ([],[]) inxs
         where
             f acc l = case AL.maybeResult $ AL.parse line l of
-                Just x -> let conn = getConcurrentRequests $ getRequestId x
-                              dateTime = getDate x
-                         in case acc of
-                            ([], xs)    -> ([(dateTime, conn)], xs)
-                            ([x], xs)   -> if logDateEqHour (fst x) dateTime
-                                            then ([(dateTime, max conn (snd x))], xs)
-                                            else ([(dateTime, conn)], x : xs)
-                Nothing -> acc
+                Just logLine    -> let conn = getConcurrentRequests $ getRequestId logLine
+                                       dateTime = getDate logLine
+                                   in case acc of
+                                    ([], xs)    -> ([(dateTime, conn)], xs)
+                                    ([prev], xs)-> if logDateEqHour (fst prev) dateTime
+                                                then ([(dateTime, max conn (snd prev))], xs)
+                                                else ([(dateTime, conn)], prev : xs)
+                Nothing         -> acc
 
 
 showLines :: [L.ByteString] -> [Maybe LogLine]
-showLines lines = take 5 $ map p_ lines
-            where p_ x = AL.maybeResult $ AL.parse line x
+showLines lines_ = take 5 $ map p_ lines_
+            where p_ l = AL.maybeResult $ AL.parse line l
 
 formatLogDate :: LogDate -> String
 formatLogDate date = printf "%04d-%02d-%02d %02d:%02d:%02d" (getYear date) (getMonth date)
@@ -220,51 +194,3 @@ formatLogDate date = printf "%04d-%02d-%02d %02d:%02d:%02d" (getYear date) (getM
 pretty :: Show a => Integer -> (a, Integer) -> String
 pretty i (bs, n) = printf "%d: %s, %d" i (show bs) n
 
--- =================================================================================
-
-main :: IO ()
-main = do
-  args <- getArgs
-  case args of
-    [cmd, path] -> dispatch cmd path
-    _ -> error "Invoke with <cmd> <path-to-log-file>"
-
-dispatch :: Command -> FilePath -> IO ()
-dispatch cmd = action
-    where
-        action = fromMaybe err (lookup cmd actions)
-        err _  = putStrLn $ "Error: " ++ cmd ++ " is not a valid command."
-
-actions :: [(Command, FilePath -> IO ())]
-actions = [("count", countLogFileLines)
-          ,("show", showParsedLines)
-          ,("maxConn", showMaxConcurrent)
-          ,("plotConn", generatePlotDataConcurrentConn)
-          ,("protocol", mapToTopList protocolCount)]
-
-showParsedLines :: FilePath -> IO()
-showParsedLines path = parseAndPrint path showLines
-
-countLogFileLines :: FilePath -> IO ()
-countLogFileLines path = parseAndPrint path countLines
-
-showMaxConcurrent :: FilePath -> IO ()
-showMaxConcurrent path = parseAndPrint path maxConcurrent
-
-generatePlotDataConcurrentConn :: FilePath -> IO ()
-generatePlotDataConcurrentConn path = do
-        content <- L.readFile path
-        let input = L.lines content
-        let plotData = plotDataConcurrentConn' input
-        mapM_ (\pd -> printf "%s|%d\n" (formatLogDate $ fst pd) (snd pd)) plotData
-
-parseAndPrint :: (Show a) => FilePath -> ([L.ByteString] -> a) -> IO ()
-parseAndPrint path f = print . f . L.lines =<< L.readFile path
-
-
-mapToTopList :: ([L.ByteString] -> [(S.ByteString, Integer)]) -> FilePath -> IO ()
-mapToTopList f p = do
-    file <- liftM L.lines $ L.readFile p
-    let mostPopular (_,a) (_,b) = compare b a
-        m = f file
-    mapM_ putStrLn . zipWith pretty [1..] . take 10 . sortBy mostPopular $ m

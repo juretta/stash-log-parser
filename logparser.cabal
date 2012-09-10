@@ -10,14 +10,18 @@ Maintainer:             Stefan Saasen <ssaasen@atlassian.com>
 Build-Type:             Simple
 
 Executable:             logparser
-Main-is:                LogParser.hs
+Main-is:                Main.hs
+Hs-source-dirs:         src
 
 Build-Depends:
                 base < 5 && >= 3,
                 bytestring >= 0.9,
+                old-locale,
+                old-time,
+                MissingH,
                 attoparsec >= 0.10,
                 unordered-containers >= 0.2
 
 GHC-Options:
                 -Wall
-
+                -fno-warn-unused-do-bind
