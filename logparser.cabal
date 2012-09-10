@@ -25,3 +25,4 @@ Build-Depends:
 GHC-Options:
                 -Wall
                 -fno-warn-unused-do-bind
+                -rtsopts
