@@ -131,16 +131,16 @@ parseLine = do
 -- matches
 logDateEq :: LogDate -> LogDate -> Bool
 logDateEq a b = logDateEqMin a b &&
-                getSeconds a == (getSeconds b)
+                getSeconds a == getSeconds b
 
 logDateEqMin :: LogDate -> LogDate -> Bool
 logDateEqMin a b = logDateEqHour a b &&
-                getMinute a == (getMinute b)
+                getMinute a == getMinute b
 
 logDateEqHour :: LogDate -> LogDate -> Bool
-logDateEqHour a b = getYear a == (getYear b) &&
-                getMonth a == (getMonth b) &&
-                getDay a == (getDay b) &&
-                getHour a == (getHour b)
+logDateEqHour a b = getYear a   == getYear b &&
+                getMonth a      == getMonth b &&
+                getDay a        == getDay b &&
+                getHour a       == getHour b
 
 

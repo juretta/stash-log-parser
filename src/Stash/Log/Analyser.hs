@@ -53,6 +53,5 @@ plotDataConcurrentConn inxs = reverse $ snd $ foldl' f ([],[]) inxs
 
 
 showLines :: [L.ByteString] -> [Maybe LogLine]
-showLines lines_ = take 5 $ map p_ lines_
-            where p_ l = parseLogLine l
+showLines lines_ = take 5 $ map parseLogLine lines_
 
