@@ -134,6 +134,19 @@ logDateEq a b = (getYear a) == (getYear b) &&
                 (getMinute a) == (getMinute b) &&
                 (getSeconds a) == (getSeconds b)
 
+logDateEqMin :: LogDate -> LogDate -> Bool
+logDateEqMin a b = (getYear a) == (getYear b) &&
+                (getMonth a) == (getMonth b) &&
+                (getDay a) == (getDay b) &&
+                (getHour a) == (getHour b) &&
+                (getMinute a) == (getMinute b)
+
+logDateEqHour :: LogDate -> LogDate -> Bool
+logDateEqHour a b = (getYear a) == (getYear b) &&
+                (getMonth a) == (getMonth b) &&
+                (getDay a) == (getDay b) &&
+                (getHour a) == (getHour b)
+
 -- 2012-08-22 18:32:08,505
 {-parseDate :: String -> Maybe CalendarTime-}
 {-parseDate dateStr = parseCalendarTime rfc822DateFormat "%Y-%m-%d %H:%M:%S" dateStr-}
@@ -184,16 +197,16 @@ plotDataConcurrentConn input = mapIfJust f input
                 Nothing -> Nothing
 
 plotDataConcurrentConn' :: [L.ByteString] -> [(LogDate, Integer)]
-plotDataConcurrentConn' = reverse . foldl' f []
+plotDataConcurrentConn' inxs = reverse $ snd $ foldl' f ([],[]) inxs
         where
             f acc l = case AL.maybeResult $ AL.parse line l of
                 Just x -> let conn = getConcurrentRequests $ getRequestId x
                               dateTime = getDate x
-                         in case (safehead acc) of
-                            Just prev -> if logDateEq (fst prev) dateTime
-                                    then (dateTime, max conn (snd prev)) : tail acc
-                                    else (dateTime, conn) : acc
-                            Nothing -> (dateTime, conn) : acc
+                         in case acc of
+                            ([], xs)    -> ([(dateTime, conn)], xs)
+                            ([x], xs)   -> if logDateEqHour (fst x) dateTime
+                                            then ([(dateTime, max conn (snd x))], xs)
+                                            else ([(dateTime, conn)], x : xs)
                 Nothing -> acc
 
 
