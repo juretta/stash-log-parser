@@ -3,6 +3,7 @@ module Main where
 import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Lazy.Char8 as L
 import Stash.Log.Parser
+import Stash.Log.Analyser
 import System.Environment (getArgs)
 import Prelude hiding (takeWhile)
 import Data.Maybe (fromMaybe)
@@ -11,6 +12,8 @@ import Data.List (sortBy)
 import Control.Monad (liftM)
 
 -- =================================================================================
+
+type Command = String
 
 main :: IO ()
 main = do
@@ -45,7 +48,7 @@ generatePlotDataConcurrentConn :: FilePath -> IO ()
 generatePlotDataConcurrentConn path = do
         content <- L.readFile path
         let input = L.lines content
-        let plotData = plotDataConcurrentConn' input
+        let plotData = plotDataConcurrentConn input
         mapM_ (\pd -> printf "%s|%d\n" (formatLogDate $ fst pd) (snd pd)) plotData
 
 parseAndPrint :: (Show a) => FilePath -> ([L.ByteString] -> a) -> IO ()
@@ -58,3 +61,10 @@ mapToTopList f p = do
     let mostPopular (_,a) (_,b) = compare b a
         m = f file
     mapM_ putStrLn . zipWith pretty [1..] . take 10 . sortBy mostPopular $ m
+
+formatLogDate :: LogDate -> String
+formatLogDate date = printf "%04d-%02d-%02d %02d:%02d:%02d" (getYear date) (getMonth date)
+                            (getDay date) (getHour date) (getMinute date) (getSeconds date)
+
+pretty :: Show a => Integer -> (a, Integer) -> String
+pretty i (bs, n) = printf "%d: %s, %d" i (show bs) n
