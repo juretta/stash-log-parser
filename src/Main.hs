@@ -20,7 +20,7 @@ main = do
   args <- getArgs
   case args of
     [cmd, path] -> dispatch cmd path
-    _ -> error "Invoke with <cmd> <path-to-log-file>"
+    _ -> error ("Invoke with <cmd> <path-to-log-file>" ++ "\n\nAvailable commands: " ++ (show $ map fst actions))
 
 dispatch :: Command -> FilePath -> IO ()
 dispatch cmd = action
