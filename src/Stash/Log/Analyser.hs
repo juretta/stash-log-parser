@@ -3,6 +3,7 @@ module Stash.Log.Analyser
 , maxConcurrent
 , protocolCount
 , plotDataConcurrentConn
+, dataConcurrentConn
 , showLines
 ) where
 
@@ -39,18 +40,21 @@ protocolCount = M.toList . foldl' count' M.empty
 -- ...
 -- Should be aggregated on a second level with the max num
 plotDataConcurrentConn :: [L.ByteString] -> [(LogDate, Integer)]
-plotDataConcurrentConn inxs = reverse $ snd $ foldl' f ([],[]) inxs
-        where
+plotDataConcurrentConn = dataConcurrentConn logDateEqHour
+
+dataConcurrentConn :: (LogDate -> LogDate -> Bool) -> [L.ByteString] -> [(LogDate, Integer)]
+dataConcurrentConn eqf inxs = reverse $ (fst res) ++ (snd res)
+        where 
             f acc l = case parseLogLine l of
                 Just logLine    -> let conn = getConcurrentRequests $ getRequestId logLine
                                        dateTime = getDate logLine
                                    in case acc of
                                     ([], xs)    -> ([(dateTime, conn)], xs)
-                                    ([prev], xs)-> if logDateEqHour (fst prev) dateTime
+                                    ([prev], xs)-> if eqf (fst prev) dateTime
                                                 then ([(dateTime, max conn (snd prev))], xs)
                                                 else ([(dateTime, conn)], prev : xs)
                 Nothing         -> acc
-
+            res = foldl' f ([],[]) inxs
 
 showLines :: [L.ByteString] -> [Maybe LogLine]
 showLines lines_ = take 5 $ map parseLogLine lines_
