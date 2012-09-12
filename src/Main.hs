@@ -32,7 +32,8 @@ actions :: [(Command, FilePath -> IO ())]
 actions = [("count", countLogFileLines)
           ,("show", showParsedLines)
           ,("maxConn", showMaxConcurrent)
-          ,("plotConn", generatePlotDataConcurrentConn)
+          ,("plotConnMinute", generatePlotDataConcurrentConn plotDataConcurrentConnMinute)
+          ,("plotConnHour", generatePlotDataConcurrentConn plotDataConcurrentConnHour)
           ,("protocol", mapToTopList protocolCount)]
 
 showParsedLines :: FilePath -> IO()
@@ -44,11 +45,11 @@ countLogFileLines path = parseAndPrint path countLines
 showMaxConcurrent :: FilePath -> IO ()
 showMaxConcurrent path = parseAndPrint path maxConcurrent
 
-generatePlotDataConcurrentConn :: FilePath -> IO ()
-generatePlotDataConcurrentConn path = do
+generatePlotDataConcurrentConn :: ([L.ByteString] -> [(LogDate, Integer)]) -> FilePath -> IO ()
+generatePlotDataConcurrentConn f path = do
         content <- L.readFile path
         let input = L.lines content
-        let plotData = plotDataConcurrentConn input
+        let plotData = f input
         mapM_ (\pd -> printf "%s|%d\n" (formatLogDate $ fst pd) (snd pd)) plotData
 
 parseAndPrint :: (Show a) => FilePath -> ([L.ByteString] -> a) -> IO ()

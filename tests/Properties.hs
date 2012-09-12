@@ -90,7 +90,7 @@ test_plotDataConcurrentConn = H.assertEqual
       ((LogDate 2012 8 23 17 44 20 123), 4),
       ((LogDate 2012 8 23 17 48 20 505), 2)
     ]
-    (dataConcurrentConn logDateEqMin dataLogLines)
+    (plotDataConcurrentConnMinute dataLogLines)
 
 test_plotDataConcurrentConnHour = H.assertEqual
     "Should aggregate the max connection per hour"
@@ -101,7 +101,7 @@ test_plotDataConcurrentConnHour = H.assertEqual
       ((LogDate 2012 8 22 23 59 59 460), 5),
       ((LogDate 2012 8 23 17 48 20 505), 4)
     ]
-    (dataConcurrentConn logDateEqHour dataLogLines)
+    (plotDataConcurrentConnHour dataLogLines)
 
 -- | Test maxConcurrent
 test_maxConcurrent = H.assertEqual

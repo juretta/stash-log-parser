@@ -2,8 +2,8 @@ module Stash.Log.Analyser
 ( countLines
 , maxConcurrent
 , protocolCount
-, plotDataConcurrentConn
-, dataConcurrentConn
+, plotDataConcurrentConnMinute
+, plotDataConcurrentConnHour
 , showLines
 ) where
 
@@ -38,9 +38,12 @@ protocolCount = M.toList . foldl' count' M.empty
 -- 2012-08-22 18:32:08,505 10
 -- 2012-08-22 18:32:08,505 4
 -- ...
--- Should be aggregated on a second level with the max num
-plotDataConcurrentConn :: [L.ByteString] -> [(LogDate, Integer)]
-plotDataConcurrentConn = dataConcurrentConn logDateEqHour
+-- Should be aggregated on a minute/hour level with the max num per unit
+plotDataConcurrentConnMinute :: [L.ByteString] -> [(LogDate, Integer)]
+plotDataConcurrentConnMinute = dataConcurrentConn logDateEqMin
+
+plotDataConcurrentConnHour :: [L.ByteString] -> [(LogDate, Integer)]
+plotDataConcurrentConnHour = dataConcurrentConn logDateEqHour
 
 dataConcurrentConn :: (LogDate -> LogDate -> Bool) -> [L.ByteString] -> [(LogDate, Integer)]
 dataConcurrentConn eqf inxs = reverse $ (fst res) ++ (snd res)
