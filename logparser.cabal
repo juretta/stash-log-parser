@@ -39,4 +39,4 @@ Executable logparser
                             -fno-warn-unused-do-bind
                             -rtsopts
                             -O2
-                            -prof -auto-all -caf-all -fforce-recomp
+                            -- -prof -auto-all -caf-all -fforce-recomp
