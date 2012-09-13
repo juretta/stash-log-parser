@@ -64,8 +64,8 @@ mapToTopList f p = do
     mapM_ putStrLn . zipWith pretty [1..] . take 10 . sortBy mostPopular $ m
 
 formatLogDate :: LogDate -> String
-formatLogDate date = printf "%04d-%02d-%02d %02d:%02d:%02d" (getYear date) (getMonth date)
-                            (getDay date) (getHour date) (getMinute date) (getSeconds date)
+formatLogDate date = printf "%04d-%02d-%02d %02d:%02d" (getYear date) (getMonth date)
+                            (getDay date) (getHour date) (getMinute date)
 
 pretty :: Show a => Integer -> (a, Integer) -> String
 pretty i (bs, n) = printf "%d: %s, %d" i (show bs) n

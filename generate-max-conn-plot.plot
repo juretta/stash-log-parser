@@ -2,7 +2,7 @@
 set datafile separator "|"
 set terminal png size 1400,1000
 set xdata time
-set timefmt "%Y-%m-%d %H:%M:%S"
+set timefmt "%Y-%m-%d %H:%M"
 set output "max-conn.png"
 # time range must be in same format as data file
 #set xrange ["Mar-25-00:00:00":"Mar-26-00:00:00"]
