@@ -45,12 +45,12 @@ countLogFileLines path = parseAndPrint path countLines
 showMaxConcurrent :: FilePath -> IO ()
 showMaxConcurrent path = parseAndPrint path maxConcurrent
 
-generatePlotDataConcurrentConn :: ([L.ByteString] -> [(LogDate, Integer)]) -> FilePath -> IO ()
+generatePlotDataConcurrentConn :: ([L.ByteString] -> [DateValuePair]) -> FilePath -> IO ()
 generatePlotDataConcurrentConn f path = do
         content <- L.readFile path
         let input = L.lines content
         let plotData = f input
-        mapM_ (\pd -> printf "%s|%d\n" (formatLogDate $ fst pd) (snd pd)) plotData
+        mapM_ (\pd -> printf "%s|%d\n" (formatLogDate $ getLogDate pd) (getValue pd)) plotData
 
 parseAndPrint :: (Show a) => FilePath -> ([L.ByteString] -> a) -> IO ()
 parseAndPrint path f = print . f . L.lines =<< L.readFile path

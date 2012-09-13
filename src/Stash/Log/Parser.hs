@@ -24,9 +24,9 @@ import Data.ByteString.Char8 (readInteger)
 data InOurOut = In | Out deriving (Show, Eq)
 
 data RequestId = RequestId {
-     getInOrOut             :: Char
-    ,getRequestCounter      :: Integer
-    ,getConcurrentRequests  :: Integer
+     getInOrOut             :: !Char
+    ,getRequestCounter      :: !Integer
+    ,getConcurrentRequests  :: !Integer
 } deriving (Show, Eq)
 
 data LogLine = LogLine {
@@ -43,13 +43,13 @@ data LogLine = LogLine {
 } deriving (Show, Eq)
 
 data LogDate = LogDate {
-    getYear :: Int
-    ,getMonth :: Int
-    ,getDay :: Int
-    ,getHour :: Int
-    ,getMinute :: Int
-    ,getSeconds :: Int
-    ,getMillis :: Int
+    getYear         :: !Int
+    ,getMonth       :: !Int
+    ,getDay         :: !Int
+    ,getHour        :: !Int
+    ,getMinute      :: !Int
+    ,getSeconds     :: !Int
+    ,getMillis      :: !Int
 } deriving (Show, Eq)
 
 parseLogLine :: L.ByteString -> Maybe LogLine

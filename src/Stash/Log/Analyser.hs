@@ -1,5 +1,8 @@
+{-# LANGUAGE OverloadedStrings, BangPatterns #-}
+
 module Stash.Log.Analyser
 ( countLines
+, DateValuePair(..)
 , maxConcurrent
 , protocolCount
 , plotDataConcurrentConnMinute
@@ -12,6 +15,11 @@ import qualified Data.ByteString.Lazy.Char8 as L
 import qualified Data.HashMap.Strict as M
 import Data.List (foldl')
 import Stash.Log.Parser
+
+data DateValuePair = DateValuePair {
+     getLogDate     :: !LogDate
+    ,getValue       :: !Integer
+} deriving (Show, Eq)
 
 countLines :: [L.ByteString] -> Integer
 countLines = fromIntegral . length
@@ -39,23 +47,25 @@ protocolCount = M.toList . foldl' count' M.empty
 -- 2012-08-22 18:32:08,505 4
 -- ...
 -- Should be aggregated on a minute/hour level with the max num per unit
-plotDataConcurrentConnMinute :: [L.ByteString] -> [(LogDate, Integer)]
+plotDataConcurrentConnMinute :: [L.ByteString] -> [DateValuePair]
 plotDataConcurrentConnMinute = dataConcurrentConn logDateEqMin
 
-plotDataConcurrentConnHour :: [L.ByteString] -> [(LogDate, Integer)]
+plotDataConcurrentConnHour :: [L.ByteString] -> [DateValuePair]
 plotDataConcurrentConnHour = dataConcurrentConn logDateEqHour
 
-dataConcurrentConn :: (LogDate -> LogDate -> Bool) -> [L.ByteString] -> [(LogDate, Integer)]
+
+
+dataConcurrentConn :: (LogDate -> LogDate -> Bool) -> [L.ByteString] -> [DateValuePair]
 dataConcurrentConn eqf inxs = reverse $ (fst res) ++ (snd res)
         where 
             f acc l = case parseLogLine l of
                 Just logLine    -> let conn = getConcurrentRequests $ getRequestId logLine
                                        dateTime = getDate logLine
                                    in case acc of
-                                    ([], xs)    -> ([(dateTime, conn)], xs)
-                                    ([prev], xs)-> if eqf (fst prev) dateTime
-                                                then ([(dateTime, max conn (snd prev))], xs)
-                                                else ([(dateTime, conn)], prev : xs)
+                                    ([], xs)    -> ([DateValuePair dateTime conn], xs)
+                                    ([prev], xs)-> dateTime `seq` if eqf (getLogDate prev) dateTime
+                                                then ([DateValuePair dateTime (max conn (getValue prev))], xs)
+                                                else ([DateValuePair dateTime conn], prev : xs)
                 Nothing         -> acc
             res = foldl' f ([],[]) inxs
 
