@@ -29,25 +29,13 @@ dispatch cmd = action
         err _  = putStrLn $ "Error: " ++ cmd ++ " is not a valid command."
 
 actions :: [(Command, FilePath -> IO ())]
-actions = [("count", countLogFileLines)
-          ,("countRequests",countRequests)
-          ,("show", showParsedLines)
-          ,("maxConn", showMaxConcurrent)
+actions = [("count", parseAndPrint countLines)
+          ,("countRequests", parseAndPrint countRequestLines)
+          ,("show", parseAndPrint showLines)
+          ,("maxConn", parseAndPrint maxConcurrent)
           ,("plotConnMinute", generatePlotDataConcurrentConn plotDataConcurrentConnMinute)
           ,("plotConnHour", generatePlotDataConcurrentConn plotDataConcurrentConnHour)
           ,("protocol", mapToTopList protocolCount)]
-
-countRequests :: FilePath -> IO()
-countRequests path = parseAndPrint path countRequestLines
-
-showParsedLines :: FilePath -> IO()
-showParsedLines path = parseAndPrint path showLines
-
-countLogFileLines :: FilePath -> IO ()
-countLogFileLines path = parseAndPrint path countLines
-
-showMaxConcurrent :: FilePath -> IO ()
-showMaxConcurrent path = parseAndPrint path maxConcurrent
 
 generatePlotDataConcurrentConn :: ([L.ByteString] -> [DateValuePair]) -> FilePath -> IO ()
 generatePlotDataConcurrentConn f path = do
@@ -56,9 +44,8 @@ generatePlotDataConcurrentConn f path = do
         let plotData = f input
         mapM_ (\pd -> printf "%s|%d\n" (formatLogDate $ getLogDate pd) (getValue pd)) plotData
 
-parseAndPrint :: (Show a) => FilePath -> ([L.ByteString] -> a) -> IO ()
-parseAndPrint path f = print . f . L.lines =<< L.readFile path
-
+parseAndPrint :: (Show a) => ([L.ByteString] -> a) -> FilePath -> IO ()
+parseAndPrint f path = print . f . L.lines =<< L.readFile path
 
 mapToTopList :: ([L.ByteString] -> [(S.ByteString, Integer)]) -> FilePath -> IO ()
 mapToTopList f p = do
