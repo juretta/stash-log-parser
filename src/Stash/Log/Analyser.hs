@@ -26,18 +26,18 @@ countLines :: [L.ByteString] -> Integer
 countLines = fromIntegral . length
 
 countRequestLines :: [L.ByteString] -> Integer
-countRequestLines = countLinesWith (\x _ ->    let rid = getRequestId x
-                                                in isIncoming rid)
+countRequestLines = countLinesWith (\x acc ->   let rid = getRequestId x
+                                                in if isIncoming rid then acc + 1 else acc)
 
 maxConcurrent:: [L.ByteString] -> Integer
 maxConcurrent = countLinesWith (\x acc ->   let conn = getConcurrentRequests $ getRequestId x
-                                            in conn >= acc)
+                                            in if conn >= acc then conn else acc)
 
-countLinesWith :: (LogLine -> Integer -> Bool) -> [L.ByteString] -> Integer
+countLinesWith :: (LogLine -> Integer -> Integer) -> [L.ByteString] -> Integer
 countLinesWith p = foldl' count' 0
     where
         count' acc l = case parseLogLine l of
-            Just logLine -> if (p logLine acc) then acc + 1 else acc
+            Just logLine -> p logLine acc
             Nothing      -> acc
 
 

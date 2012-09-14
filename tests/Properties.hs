@@ -83,23 +83,23 @@ dataLogLines = [
 test_plotDataConcurrentConn = H.assertEqual
     "Should aggregate the max connection per minute"
     [
-      ((LogDate 2012 8 22 18 32 55 300), 10),
-      ((LogDate 2012 8 22 20 28 04 864), 1),
-      ((LogDate 2012 8 22 21 7 11 798), 4),
-      ((LogDate 2012 8 22 23 59 59 460), 5),
-      ((LogDate 2012 8 23 17 44 20 123), 4),
-      ((LogDate 2012 8 23 17 48 20 505), 2)
+      (DateValuePair (LogDate 2012 8 22 18 32 55 300) 10),
+      (DateValuePair (LogDate 2012 8 22 20 28 04 864) 1),
+      (DateValuePair (LogDate 2012 8 22 21 7 11 798) 4),
+      (DateValuePair (LogDate 2012 8 22 23 59 59 460) 5),
+      (DateValuePair (LogDate 2012 8 23 17 44 20 123) 4),
+      (DateValuePair (LogDate 2012 8 23 17 48 20 505) 2)
     ]
     (plotDataConcurrentConnMinute dataLogLines)
 
 test_plotDataConcurrentConnHour = H.assertEqual
     "Should aggregate the max connection per hour"
     [
-      ((LogDate 2012 8 22 18 32 55 300), 10),
-      ((LogDate 2012 8 22 20 28 04 864), 1),
-      ((LogDate 2012 8 22 21 7 11 798), 4),
-      ((LogDate 2012 8 22 23 59 59 460), 5),
-      ((LogDate 2012 8 23 17 48 20 505), 4)
+      (DateValuePair (LogDate 2012 8 22 18 32 55 300) 10),
+      (DateValuePair (LogDate 2012 8 22 20 28 04 864) 1),
+      (DateValuePair (LogDate 2012 8 22 21 7 11 798) 4),
+      (DateValuePair (LogDate 2012 8 22 23 59 59 460) 5),
+      (DateValuePair (LogDate 2012 8 23 17 48 20 505) 4)
     ]
     (plotDataConcurrentConnHour dataLogLines)
 
