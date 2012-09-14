@@ -2,6 +2,7 @@
 
 module Stash.Log.Analyser
 ( countLines
+, countRequestLines
 , DateValuePair(..)
 , maxConcurrent
 , protocolCount
@@ -24,13 +25,22 @@ data DateValuePair = DateValuePair {
 countLines :: [L.ByteString] -> Integer
 countLines = fromIntegral . length
 
+countRequestLines :: [L.ByteString] -> Integer
+countRequestLines = countLinesWith (\x _ ->    let rid = getRequestId x
+                                                in isIncoming rid)
+
 maxConcurrent:: [L.ByteString] -> Integer
-maxConcurrent = foldl' count' 0
+maxConcurrent = countLinesWith (\x acc ->   let conn = getConcurrentRequests $ getRequestId x
+                                            in conn >= acc)
+
+countLinesWith :: (LogLine -> Integer -> Bool) -> [L.ByteString] -> Integer
+countLinesWith p = foldl' count' 0
     where
         count' acc l = case parseLogLine l of
-            Just logLine -> let conn = getConcurrentRequests $ getRequestId logLine
-                            in if conn >= acc then conn else acc
+            Just logLine -> if (p logLine acc) then acc + 1 else acc
             Nothing      -> acc
+
+
 
 protocolCount :: [L.ByteString] -> [(S.ByteString,Integer)]
 protocolCount = M.toList . foldl' count' M.empty
@@ -57,7 +67,7 @@ plotDataConcurrentConnHour = dataConcurrentConn logDateEqHour
 
 dataConcurrentConn :: (LogDate -> LogDate -> Bool) -> [L.ByteString] -> [DateValuePair]
 dataConcurrentConn eqf inxs = reverse $ (fst res) ++ (snd res)
-        where 
+        where
             f acc l = case parseLogLine l of
                 Just logLine    -> let conn = getConcurrentRequests $ getRequestId logLine
                                        dateTime = getDate logLine

@@ -30,11 +30,15 @@ dispatch cmd = action
 
 actions :: [(Command, FilePath -> IO ())]
 actions = [("count", countLogFileLines)
+          ,("countRequests",countRequests)
           ,("show", showParsedLines)
           ,("maxConn", showMaxConcurrent)
           ,("plotConnMinute", generatePlotDataConcurrentConn plotDataConcurrentConnMinute)
           ,("plotConnHour", generatePlotDataConcurrentConn plotDataConcurrentConnHour)
           ,("protocol", mapToTopList protocolCount)]
+
+countRequests :: FilePath -> IO()
+countRequests path = parseAndPrint path countRequestLines
 
 showParsedLines :: FilePath -> IO()
 showParsedLines path = parseAndPrint path showLines

@@ -6,6 +6,8 @@ module Stash.Log.Parser
 , LogLine(..)
 , LogDate(..)
 , parseLogLine
+, isIncoming
+, isOutgoing
 , logDateEq
 , logDateEqMin
 , logDateEqHour
@@ -28,6 +30,12 @@ data RequestId = RequestId {
     ,getRequestCounter      :: !Integer
     ,getConcurrentRequests  :: !Integer
 } deriving (Show, Eq)
+
+isIncoming :: RequestId -> Bool
+isIncoming rid = getInOrOut rid == 'i'
+
+isOutgoing :: RequestId -> Bool
+isOutgoing rid = getInOrOut rid == 'o'
 
 data LogLine = LogLine {
      getRemoteAdress        :: S.ByteString
