@@ -20,6 +20,7 @@ Test-Suite logparser-testsuite
                             test-framework-hunit,
                             bytestring,
                             attoparsec,
+                            MissingH,
                             HUnit,
                             unordered-containers,
                             QuickCheck >= 2.4.0.1

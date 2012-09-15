@@ -19,8 +19,9 @@ import qualified Data.ByteString.Lazy.Char8 as L
 import Data.Attoparsec.Char8 hiding (char, space, take)
 import Prelude hiding (takeWhile)
 import Data.ByteString.Char8 (readInteger)
+import Data.String.Utils (split)
 
--- REMOTE_ADRESS | PROTOCOL | (o|i)REQUEST_ID | USERNAME | date   URL | DETAILS | LABELS | TIME | SESSION_ID |
+-- REMOTE_ADRESS | PROTOCOL | (o|i)REQUEST_ID | USERNAME | date |  URL | DETAILS | LABELS | TIME | SESSION_ID |
 -- REQUEST_ID -> MINUTE_OF_DAYxREQUEST_COUNTERxCONCURRENT_REQUESTS
 
 data InOurOut = In | Out deriving (Show, Eq)
@@ -45,7 +46,7 @@ data LogLine = LogLine {
     ,getDate                :: LogDate
     ,getAction              :: S.ByteString
     ,getDetails             :: S.ByteString
-    ,getLabels              :: S.ByteString
+    ,getLabels              :: [String]
     ,getRequestDuration     :: S.ByteString
     ,getSessionId           :: S.ByteString
 } deriving (Show, Eq)
@@ -65,13 +66,12 @@ parseLogLine line = AL.maybeResult $ AL.parse parseLine line
 
 -- =================================================================================
 
-pipe, space, dash, colon, comma, quote, x :: Parser Char
+pipe, space, dash, colon, comma, x :: Parser Char
 pipe        = satisfy (== '|')
 space       = satisfy (== ' ')
 dash        = satisfy (== '-')
 colon       = satisfy (== ':')
 comma       = satisfy (== ',')
-quote       = satisfy (== '\"')
 x           = satisfy (== 'x')
 
 -- 2012-08-22 18:32:08,505
@@ -90,6 +90,9 @@ parseLogEntryDate = do
     second <- decimal
     comma
     millis <- decimal
+    space
+    pipe
+    space
     return $ LogDate year month day hour minute second millis
 
 logEntry :: Parser S.ByteString
@@ -128,10 +131,10 @@ parseLine = do
     date <- parseLogEntryDate
     action <- logEntry
     details <- logEntry
-    labels <- logEntry
+    labels_ <- logEntry
     duration <- logEntry
     sessionId <- logEntry
-
+    let labels = split "," (S.unpack labels_)
     return $ LogLine remoteAddress protocol requestId username date
                     action details labels duration sessionId
 

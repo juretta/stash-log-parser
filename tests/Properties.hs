@@ -35,7 +35,7 @@ test_logLineParserEmpty = H.assertEqual
   ( parseLogLine "" )
 
 parsedLogLine = parseLogLine inputLine
-    where inputLine = "63.246.22.196,172.16.3.45 | https | i1112x6x32 | - | 2012-08-22 18:32:08,505 | \"GET /git/ATLASSIAN/jira.git/info/refs HTTP/1.1\" | \"\" \"git/1.7.4.1\" | - | - | - | "
+    where inputLine = "63.246.22.196,172.16.3.45 | https | i1112x6x32 | - | 2012-08-22 18:32:08,505 | \"GET /git/ATLASSIAN/jira.git/info/refs HTTP/1.1\" | \"\" \"git/1.7.4.1\" | fetch | - | - | "
 
 test_parseLogEntryDate = H.assertEqual
     "Should parse the date correctly"
@@ -47,9 +47,24 @@ test_logLineParseSingleLine = H.assertBool
     (isJust parsedLogLine)
 
 test_logLineParseProtocol = H.assertEqual
-    "Should parse the protocol correct"
+    "Should parse the protocol correctly"
     "https"
     (getProtocol $ fromJust parsedLogLine)
+
+test_logLineParseAction = H.assertEqual
+    "Should parse the labels correctly"
+    "\"GET /git/ATLASSIAN/jira.git/info/refs HTTP/1.1\""
+    (getAction $ fromJust parsedLogLine)
+
+test_logLineParseDetails = H.assertEqual
+    "Should parse the labels correctly"
+    "\"\" \"git/1.7.4.1\""
+    (getDetails $ fromJust parsedLogLine)
+
+test_logLineParseLabels = H.assertEqual
+    "Should parse the labels correctly"
+    ["fetch"]
+    (getLabels $ fromJust parsedLogLine)
 
 test_logLineParseRequestId = H.assertEqual
     "Should parse the request id"
@@ -134,6 +149,9 @@ tests =
         ,testCase "parser/parse single line" test_logLineParseSingleLine
         ,testCase "parser/parse protocol" test_logLineParseProtocol
         ,testCase "parser/parse request id" test_logLineParseRequestId
+        ,testCase "parser/parse action" test_logLineParseAction
+        ,testCase "parser/parse details" test_logLineParseDetails
+        ,testCase "parser/parse labels" test_logLineParseLabels
         ,testCase "parser/parse request counter" test_logLineParseRequestIdCounter
         ,testCase "parser/parse request concurrent requests" test_logLineParseRequestIdConcurrent
         ,testCase "parser/parse log entry date" test_parseLogEntryDate
