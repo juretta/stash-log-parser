@@ -85,10 +85,11 @@ dataConcurrentConn eqf inxs = reverse $ (fst res) ++ (snd res)
                 Just logLine    -> let conn = getConcurrentRequests $ getRequestId logLine
                                        dateTime = getDate logLine
                                    in case acc of
-                                    ([], xs)    -> ([DateValuePair dateTime conn], xs)
                                     ([prev], xs)-> dateTime `seq` if eqf (getLogDate prev) dateTime
                                                 then ([DateValuePair dateTime (max conn (getValue prev))], xs)
                                                 else ([DateValuePair dateTime conn], prev : xs)
+                                    ([], xs)    -> ([DateValuePair dateTime conn], xs)
+                                    (_, _)      -> ([], [])
                 Nothing         -> acc
             res = foldl' f ([],[]) inxs
 
