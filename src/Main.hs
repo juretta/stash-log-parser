@@ -31,23 +31,32 @@ dispatch cmd = action
 actions :: [(Command, FilePath -> IO ())]
 actions = [("count", parseAndPrint countLines)
           ,("countRequests", parseAndPrint countRequestLines)
+          ,("summary", summary)
           ,("show", parseAndPrint showLines)
           ,("maxConn", parseAndPrint maxConcurrent)
           ,("plotConnMinute", generatePlotDataConcurrentConn plotDataConcurrentConnMinute)
           ,("plotConnHour", generatePlotDataConcurrentConn plotDataConcurrentConnHour)
           ,("protocol", mapToTopList protocolCount)]
 
-generatePlotDataConcurrentConn :: ([L.ByteString] -> [DateValuePair]) -> FilePath -> IO ()
+summary :: FilePath -> IO ()
+summary path = do
+        content <- L.readFile path
+        let inputLines = L.lines content
+        let result = countGitOperations inputLines
+        mapM_ (putStrLn . show) result
+
+
+generatePlotDataConcurrentConn :: (Input -> [DateValuePair]) -> FilePath -> IO ()
 generatePlotDataConcurrentConn f path = do
         content <- L.readFile path
         let input = L.lines content
         let plotData = f input
         mapM_ (\pd -> printf "%s|%d\n" (formatLogDate $ getLogDate pd) (getValue pd)) plotData
 
-parseAndPrint :: (Show a) => ([L.ByteString] -> a) -> FilePath -> IO ()
+parseAndPrint :: (Show a) => (Input -> a) -> FilePath -> IO ()
 parseAndPrint f path = print . f . L.lines =<< L.readFile path
 
-mapToTopList :: ([L.ByteString] -> [(S.ByteString, Integer)]) -> FilePath -> IO ()
+mapToTopList :: (Input -> [(S.ByteString, Integer)]) -> FilePath -> IO ()
 mapToTopList f p = do
     file <- liftM L.lines $ L.readFile p
     let mostPopular (_,a) (_,b) = compare b a
