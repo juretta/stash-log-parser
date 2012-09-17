@@ -96,3 +96,13 @@ dataConcurrentConn eqf inxs = reverse $ (fst res) ++ (snd res)
 showLines :: Input -> [Maybe LogLine]
 showLines lines_ = take 5 $ map parseLogLine lines_
 
+
+logDateEqMin :: LogDate -> LogDate -> Bool
+logDateEqMin a b = logDateEqHour a b &&
+                getMinute a == getMinute b
+
+logDateEqHour :: LogDate -> LogDate -> Bool
+logDateEqHour a b = getYear a   == getYear b &&
+                getMonth a      == getMonth b &&
+                getDay a        == getDay b &&
+                getHour a       == getHour b

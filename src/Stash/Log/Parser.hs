@@ -8,9 +8,6 @@ module Stash.Log.Parser
 , parseLogLine
 , isIncoming
 , isOutgoing
-, logDateEq
-, logDateEqMin
-, logDateEqHour
 ) where
 
 import qualified Data.Attoparsec.Lazy as AL
@@ -137,21 +134,4 @@ parseLine = do
     let labels = split "," (S.unpack labels_)
     return $ LogLine remoteAddress protocol requestId username date
                     action details labels duration sessionId
-
--- Two LogDates are considered equal if every field apart from the millis field
--- matches
-logDateEq :: LogDate -> LogDate -> Bool
-logDateEq a b = logDateEqMin a b &&
-                getSeconds a == getSeconds b
-
-logDateEqMin :: LogDate -> LogDate -> Bool
-logDateEqMin a b = logDateEqHour a b &&
-                getMinute a == getMinute b
-
-logDateEqHour :: LogDate -> LogDate -> Bool
-logDateEqHour a b = getYear a   == getYear b &&
-                getMonth a      == getMonth b &&
-                getDay a        == getDay b &&
-                getHour a       == getHour b
-
 
