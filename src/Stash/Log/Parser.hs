@@ -99,7 +99,9 @@ logEntry = do
    space
    return $ S.init entry
 
--- | i8x1401519x6 |
+-- | Parse the request Id. A request id consist of a a char indicating an
+-- request 'i' or response 'o', followed by the minute of the day, a request
+-- counter and the number of concurrent requests, separated by an 'x'. E.g. i8x1401519x6
 parseRequestId :: Parser RequestId
 parseRequestId = do
     which <- satisfy (\c -> c == 'i' || c == 'o')
@@ -113,12 +115,7 @@ parseRequestId = do
     space
     return $ RequestId which (maybe 0 fst $ readInteger counter) (maybe 0 fst $ readInteger concurrent)
 
-{-
-
-- 63.246.22.198,172.16.3.45 | https | o16x1402216x7 | cbac-confluence-user | 2012-09-08 00:17:00,270 | "GET /scm/ATLASSIAN/confluence.git/info/refs HTTP/1.1" | "" "JGit/unknown" | - | 1506 | - |
-
--}
-
+-- | Parse an access log line
 parseLine :: Parser LogLine
 parseLine = do
     remoteAddress <- logEntry
@@ -135,3 +132,7 @@ parseLine = do
     return $ LogLine remoteAddress protocol requestId username date
                     action details labels duration sessionId
 
+{-
+Example log line
+- 63.246.22.198,172.16.3.45 | https | o16x1402216x7 | cbac-confluence-user | 2012-09-08 00:17:00,270 | "GET /scm/ATLASSIAN/confluence.git/info/refs HTTP/1.1" | "" "JGit/unknown" | - | 1506 | - |
+-}
