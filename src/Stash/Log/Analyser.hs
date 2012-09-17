@@ -52,16 +52,17 @@ protocolCount = M.toList . foldl' count' M.empty
                 Nothing      -> acc
 
 countGitOperations :: Input -> [(String,Int)]
-countGitOperations inputLines = zip ["fetch", "clone", "push"] $ foldl' count' [0,0,0] inputLines
+countGitOperations inputLines = zip ["fetch", "shallow clone", "clone", "push"] $ foldl' count' [0,0,0,0] inputLines
     where
         count' acc l = case parseLogLine l of
             Just logLine -> case acc of
-                                [a,b,c] -> let  labels = getLabels logLine
-                                                !a' = if elem "fetch" labels then a + 1 else a
-                                                !b' = if (elem "shallow clone" labels || elem "clone" labels) then b + 1 else b
-                                                !c' = if elem "push" labels then c + 1 else c
-                                                in [a', b', c']
-                                _       -> acc
+                                [a,b,c,d] -> let  labels = getLabels logLine
+                                                  !a' = if "fetch" `elem` labels          then a + 1 else a
+                                                  !b' = if "shallow clone" `elem` labels  then b + 1 else b
+                                                  !c' = if "clone" `elem` labels          then c + 1 else c
+                                                  !d' = if "push" `elem` labels           then d + 1 else d
+                                                  in [a', b', c', d']
+                                _         -> acc
             Nothing      -> acc
 
 -- The concurrent connection data needs to be aggregated.
