@@ -20,7 +20,7 @@ main = do
   args <- getArgs
   case args of
     [cmd, path] -> dispatch cmd path
-    _ -> error ("Invoke with <cmd> <path-to-log-file>" ++ "\n\nAvailable commands: " ++ (show $ map fst actions))
+    _ -> error ("Invoke with <cmd> <path-to-log-file>" ++ "\n\nAvailable commands: " ++ show (map fst actions))
 
 dispatch :: Command -> FilePath -> IO ()
 dispatch cmd = action
@@ -43,7 +43,7 @@ summary path = do
         content <- L.readFile path
         let inputLines = L.lines content
         let result = countGitOperations inputLines
-        mapM_ (putStrLn . show) result
+        mapM_ print result
 
 
 generatePlotDataConcurrentConn :: (Input -> [DateValuePair]) -> FilePath -> IO ()

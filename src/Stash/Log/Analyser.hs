@@ -79,7 +79,7 @@ plotDataConcurrentConnHour :: Input -> [DateValuePair]
 plotDataConcurrentConnHour = dataConcurrentConn logDateEqHour
 
 dataConcurrentConn :: (LogDate -> LogDate -> Bool) -> Input -> [DateValuePair]
-dataConcurrentConn eqf inxs = reverse $ (fst res) ++ (snd res)
+dataConcurrentConn eqf inxs = reverse $ uncurry (++) res
         where
             f acc l = case parseLogLine l of
                 Just logLine    -> let conn = getConcurrentRequests $ getRequestId logLine

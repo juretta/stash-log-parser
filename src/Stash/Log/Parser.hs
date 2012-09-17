@@ -87,9 +87,7 @@ parseLogEntryDate = do
     second <- decimal
     comma
     millis <- decimal
-    space
-    pipe
-    space
+    separator
     return $ LogDate year month day hour minute second millis
 
 logEntry :: Parser S.ByteString
@@ -110,10 +108,14 @@ parseRequestId = do
     counter <- takeTill (== 'x')
     x
     concurrent <- takeTill (== ' ')
+    separator
+    return $ RequestId which (maybe 0 fst $ readInteger counter) (maybe 0 fst $ readInteger concurrent)
+
+separator :: Parser Char
+separator = do
     space
     pipe
     space
-    return $ RequestId which (maybe 0 fst $ readInteger counter) (maybe 0 fst $ readInteger concurrent)
 
 -- | Parse an access log line
 parseLine :: Parser LogLine
