@@ -9,6 +9,7 @@ module Stash.Log.Analyser
 , protocolCount
 , plotDataConcurrentConnMinute
 , plotDataConcurrentConnHour
+, plotGitOperations
 , showLines
 , countGitOperations
 ) where
@@ -16,7 +17,10 @@ module Stash.Log.Analyser
 import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Lazy.Char8 as L
 import qualified Data.HashMap.Strict as M
-import Data.List (foldl')
+import Data.List (foldl', groupBy)
+import Data.Maybe (mapMaybe)
+import Data.Function (on)
+import Text.Printf (printf)
 import Stash.Log.Parser
 
 data DateValuePair = DateValuePair {
@@ -65,6 +69,22 @@ countGitOperations inputLines = zip ["fetch", "shallow clone", "clone", "push"] 
                                 _         -> acc
             Nothing      -> acc
 
+inLabel :: LogLine -> String -> Bool
+inLabel logLine name =  let labels = getLabels logLine
+                        in name `elem` labels
+
+isFetch :: LogLine -> Bool
+isFetch logLine = inLabel logLine "fetch" && not (inLabel logLine "clone" || inLabel logLine "shallow clone")
+
+isClone :: LogLine -> Bool
+isClone logLine = inLabel logLine "clone"
+
+isShallowClone :: LogLine -> Bool
+isShallowClone logLine = inLabel logLine "shallow clone"
+
+isPush :: LogLine -> Bool
+isPush logLine = inLabel logLine "push"
+
 -- The concurrent connection data needs to be aggregated.
 -- Example
 --
@@ -93,6 +113,29 @@ dataConcurrentConn eqf inxs = reverse $ uncurry (++) res
                                     (_, _)      -> ([], [])
                 Nothing         -> acc
             res = foldl' f ([],[]) inxs
+
+parseLines :: Input -> [LogLine]
+parseLines = mapMaybe parseLogLine
+
+-- Example Output
+-- (Date, clone, fetch, shallow clone, push)
+plotGitOperations :: (Num a) => Input -> [(String, a, a, a, a)]
+plotGitOperations rawLines =
+    let groups = groupBy (logDateEqHour `on` getDate) $ parseLines rawLines
+        formatLogDate date = printf "%04d-%02d-%02d %02d" (getYear date) (getMonth date)
+                            (getDay date) (getHour date)
+        aggregate = foldl' (\acc logLine -> case acc of
+                                                (date, clone, fetch, shallowClone, push)
+                                                    -> let !clone'          = if isClone logLine then clone + 1 else clone
+                                                           !fetch'          = if isFetch logLine then fetch + 1 else fetch
+                                                           !shallowClone'   = if isShallowClone logLine then shallowClone + 1 else shallowClone
+                                                           !push'           = if isPush logLine then push + 1 else push
+                                                           !date'           = if null date then formatLogDate $ getDate logLine else date
+                                                           in (date', clone', fetch', shallowClone', push')
+                            ) ("", 0,0,0,0)
+    in map aggregate groups
+
+
 
 showLines :: Input -> [Maybe LogLine]
 showLines lines_ = take 5 $ map parseLogLine lines_

@@ -36,6 +36,7 @@ actions = [("count", parseAndPrint countLines)
           ,("maxConn", parseAndPrint maxConcurrent)
           ,("plotConnMinute", generatePlotDataConcurrentConn plotDataConcurrentConnMinute)
           ,("plotConnHour", generatePlotDataConcurrentConn plotDataConcurrentConnHour)
+          ,("plotGitOperations", generatePlotDataGitOps plotGitOperations)
           ,("protocol", mapToTopList protocolCount)]
 
 summary :: FilePath -> IO ()
@@ -43,6 +44,10 @@ summary path = do
         result <- liftM countGitOperations $ toLines path
         mapM_ print result
 
+generatePlotDataGitOps :: (Input -> [(String, Int, Int, Int, Int)]) -> FilePath -> IO ()
+generatePlotDataGitOps f path = do
+        plotData <- liftM f $ toLines path
+        mapM_ (\(date, a, b, c, d)  -> printf "%s|%d|%d|%d|%d\n" date a b c d) plotData
 
 generatePlotDataConcurrentConn :: (Input -> [DateValuePair]) -> FilePath -> IO ()
 generatePlotDataConcurrentConn f path = do
