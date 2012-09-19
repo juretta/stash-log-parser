@@ -40,28 +40,27 @@ actions = [("count", parseAndPrint countLines)
 
 summary :: FilePath -> IO ()
 summary path = do
-        content <- L.readFile path
-        let inputLines = L.lines content
-        let result = countGitOperations inputLines
+        result <- liftM countGitOperations $ toLines path
         mapM_ print result
 
 
 generatePlotDataConcurrentConn :: (Input -> [DateValuePair]) -> FilePath -> IO ()
 generatePlotDataConcurrentConn f path = do
-        content <- L.readFile path
-        let input = L.lines content
-        let plotData = f input
+        plotData <- liftM f $ toLines path
         mapM_ (\pd -> printf "%s|%d\n" (formatLogDate $ getLogDate pd) (getValue pd)) plotData
 
 parseAndPrint :: (Show a) => (Input -> a) -> FilePath -> IO ()
 parseAndPrint f path = print . f . L.lines =<< L.readFile path
 
 mapToTopList :: (Input -> [(S.ByteString, Integer)]) -> FilePath -> IO ()
-mapToTopList f p = do
-    file <- liftM L.lines $ L.readFile p
+mapToTopList f path = do
+    result <- toLines path
     let mostPopular (_,a) (_,b) = compare b a
-        m = f file
+        m = f result
     mapM_ putStrLn . zipWith pretty [1..] . take 10 . sortBy mostPopular $ m
+
+toLines :: FilePath -> IO [L.ByteString]
+toLines path = liftM L.lines $ L.readFile path
 
 formatLogDate :: LogDate -> String
 formatLogDate date = printf "%04d-%02d-%02d %02d:%02d" (getYear date) (getMonth date)
