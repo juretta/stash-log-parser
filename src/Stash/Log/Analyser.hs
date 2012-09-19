@@ -34,26 +34,21 @@ countLines :: Input -> Integer
 countLines = fromIntegral . length
 
 countRequestLines :: Input -> Integer
-countRequestLines = countLinesWith (\x acc ->   let rid = getRequestId x
-                                                in if isIncoming rid then acc + 1 else acc)
+countRequestLines = countLinesWith (\x acc -> let rid = getRequestId x
+                                              in if isIncoming rid then acc + 1 else acc)
 
 maxConcurrent:: Input -> Integer
-maxConcurrent = countLinesWith (\x acc ->   let conn = getConcurrentRequests $ getRequestId x
-                                            in if conn >= acc then conn else acc)
+maxConcurrent = countLinesWith (\x acc -> let conn = getConcurrentRequests $ getRequestId x
+                                          in if conn >= acc then conn else acc)
 
-countLinesWith :: (LogLine -> Integer -> Integer) -> Input -> Integer
-countLinesWith p = foldl' count' 0
-    where
-        count' acc l = case parseLogLine l of
-            Just logLine -> p logLine acc
-            Nothing      -> acc
+countLinesWith :: (Num a) => (LogLine -> a -> a) -> Input -> a
+countLinesWith f = foldl' count' 0
+    where count' acc l = maybe acc (`f` acc) $ parseLogLine l
 
 protocolCount :: Input -> [(S.ByteString,Integer)]
-protocolCount = M.toList . foldl' count' M.empty
+protocolCount logLines = M.toList . foldl' count' M.empty $ mapMaybe parseLogLine logLines
         where
-            count' acc l = case parseLogLine l of
-                Just logLine -> M.insertWith (+) (S.copy (getProtocol logLine)) 1 acc
-                Nothing      -> acc
+            count' acc logLine = M.insertWith (+) (S.copy (getProtocol logLine)) 1 acc
 
 countGitOperations :: Input -> [(String,Int)]
 countGitOperations inputLines = zip ["fetch", "shallow clone", "clone", "push"] $ foldl' count' [0,0,0,0] inputLines
