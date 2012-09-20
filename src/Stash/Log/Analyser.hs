@@ -11,7 +11,6 @@ module Stash.Log.Analyser
 , plotDataConcurrentConnHour
 , plotGitOperations
 , showLines
-, countGitOperations
 ) where
 
 import qualified Data.ByteString.Char8 as S
@@ -49,20 +48,6 @@ protocolCount :: Input -> [(S.ByteString,Integer)]
 protocolCount logLines = M.toList . foldl' count' M.empty $ mapMaybe parseLogLine logLines
         where
             count' acc logLine = M.insertWith (+) (S.copy (getProtocol logLine)) 1 acc
-
-countGitOperations :: Input -> [(String,Int)]
-countGitOperations inputLines = zip ["fetch", "shallow clone", "clone", "push"] $ foldl' count' [0,0,0,0] inputLines
-    where
-        count' acc l = case parseLogLine l of
-            Just logLine -> case acc of
-                                [a,b,c,d] -> let  labels = getLabels logLine
-                                                  !a' = if "fetch" `elem` labels          then a + 1 else a
-                                                  !b' = if "shallow clone" `elem` labels  then b + 1 else b
-                                                  !c' = if "clone" `elem` labels          then c + 1 else c
-                                                  !d' = if "push" `elem` labels           then d + 1 else d
-                                                  in [a', b', c', d']
-                                _         -> acc
-            Nothing      -> acc
 
 inLabel :: LogLine -> String -> Bool
 inLabel logLine name =  let labels = getLabels logLine

@@ -31,18 +31,12 @@ dispatch cmd = action
 actions :: [(Command, FilePath -> IO ())]
 actions = [("count", parseAndPrint countLines)
           ,("countRequests", parseAndPrint countRequestLines)
-          ,("summary", summary)
           ,("show", parseAndPrint showLines)
           ,("maxConn", parseAndPrint maxConcurrent)
           ,("plotConnMinute", generatePlotDataConcurrentConn plotDataConcurrentConnMinute)
           ,("plotConnHour", generatePlotDataConcurrentConn plotDataConcurrentConnHour)
           ,("plotGitOperations", generatePlotDataGitOps plotGitOperations)
           ,("protocol", mapToTopList protocolCount)]
-
-summary :: FilePath -> IO ()
-summary path = do
-        result <- liftM countGitOperations $ toLines path
-        mapM_ print result
 
 generatePlotDataGitOps :: (Input -> [(String, Int, Int, Int, Int)]) -> FilePath -> IO ()
 generatePlotDataGitOps f path = do
