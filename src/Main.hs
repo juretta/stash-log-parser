@@ -29,14 +29,14 @@ dispatch cmd = action
         err _  = putStrLn $ "Error: " ++ cmd ++ " is not a valid command."
 
 actions :: [(Command, FilePath -> IO ())]
-actions = [("count", parseAndPrint countLines)
-          ,("countRequests", parseAndPrint countRequestLines)
-          ,("show", parseAndPrint showLines)
-          ,("maxConn", parseAndPrint maxConcurrent)
-          ,("plotConnMinute", generatePlotDataConcurrentConn plotDataConcurrentConnMinute)
-          ,("plotConnHour", generatePlotDataConcurrentConn plotDataConcurrentConnHour)
-          ,("plotGitOperations", generatePlotDataGitOps plotGitOperations)
-          ,("protocol", mapToTopList protocolCount)]
+actions = [("count",                parseAndPrint countLines)
+          ,("countRequests",        parseAndPrint countRequestLines)
+          --,("show",                 parseAndPrint showLines) -- Useful for dev
+          ,("maxConn",              parseAndPrint maxConcurrent)
+          ,("plotConnMinute",       generatePlotDataConcurrentConn plotDataConcurrentConnMinute)
+          ,("plotConnHour",         generatePlotDataConcurrentConn plotDataConcurrentConnHour)
+          ,("plotGitOperations",    generatePlotDataGitOps plotGitOperations)
+          ,("protocol",             mapToTopList protocolCount)]
 
 generatePlotDataGitOps :: (Input -> [(String, Int, Int, Int, Int)]) -> FilePath -> IO ()
 generatePlotDataGitOps f path = do
