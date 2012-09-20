@@ -29,12 +29,6 @@ data RequestId = RequestId {
     ,getConcurrentRequests  :: !Integer
 } deriving (Show, Eq)
 
-isIncoming :: RequestId -> Bool
-isIncoming rid = getInOrOut rid == 'i'
-
-isOutgoing :: RequestId -> Bool
-isOutgoing rid = getInOrOut rid == 'o'
-
 data LogLine = LogLine {
      getRemoteAdress        :: S.ByteString
     ,getProtocol            :: S.ByteString
@@ -58,8 +52,17 @@ data LogDate = LogDate {
     ,getMillis      :: !Int
 } deriving (Show, Eq)
 
+-- | Parse a single log line.
 parseLogLine :: L.ByteString -> Maybe LogLine
 parseLogLine line = AL.maybeResult $ AL.parse parseLine line
+
+-- | Check whether this is a log line for the request ("incoming")
+isIncoming :: RequestId -> Bool
+isIncoming rid = getInOrOut rid == 'i'
+
+-- | Check whether this is a log line for a response ("outgoing")
+isOutgoing :: RequestId -> Bool
+isOutgoing rid = getInOrOut rid == 'o'
 
 -- =================================================================================
 
