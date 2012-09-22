@@ -82,17 +82,16 @@ plotDataConcurrentConnHour = dataConcurrentConn logDateEqHour
 dataConcurrentConn :: (LogDate -> LogDate -> Bool) -> Input -> [DateValuePair]
 dataConcurrentConn eqf inxs = reverse $ uncurry (++) res
         where
-            f acc l = case parseLogLine l of
-                Just logLine    -> let conn = getConcurrentRequests $ getRequestId logLine
-                                       dateTime = getDate logLine
-                                   in case acc of
-                                    ([prev], xs)-> dateTime `seq` if eqf (getLogDate prev) dateTime
-                                                then ([DateValuePair dateTime (max conn (getValue prev))], xs)
-                                                else ([DateValuePair dateTime conn], prev : xs)
-                                    ([], xs)    -> ([DateValuePair dateTime conn], xs)
-                                    (_, _)      -> ([], [])
-                Nothing         -> acc
-            res = foldl' f ([],[]) inxs
+            f acc logLine =
+                    let conn = getConcurrentRequests $ getRequestId logLine
+                        dateTime = getDate logLine
+                    in case acc of
+                     ([prev], xs)-> dateTime `seq` if eqf (getLogDate prev) dateTime
+                                 then ([DateValuePair dateTime (max conn (getValue prev))], xs)
+                                 else ([DateValuePair dateTime conn], prev : xs)
+                     ([], xs)    -> ([DateValuePair dateTime conn], xs)
+                     (_, _)      -> ([], [])
+            res = foldl' f ([],[]) $ parseLines inxs
 
 parseLines :: Input -> [LogLine]
 parseLines = mapMaybe parseLogLine
