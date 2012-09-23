@@ -4,6 +4,7 @@ module Stash.Log.Analyser
 ( countLines
 , countRequestLines
 , Input
+, GitOperation
 , DateValuePair(..)
 , maxConcurrent
 , protocolCount
@@ -28,6 +29,8 @@ data DateValuePair = DateValuePair {
 } deriving (Show, Eq)
 
 type Input = [L.ByteString]
+
+type GitOperation a = (String, a, a, a, a)
 
 countLines :: Input -> Integer
 countLines = fromIntegral . length
@@ -98,22 +101,28 @@ parseLines = mapMaybe parseLogLine
 
 -- Example Output
 -- (Date, clone, fetch, shallow clone, push)
-plotGitOperations :: (Num a) => Input -> [(String, a, a, a, a)]
+plotGitOperations :: (Num a) => Input -> [GitOperation a]
 plotGitOperations rawLines =
-    let groups = groupBy (logDateEqHour `on` getDate) $ parseLines rawLines
-        formatLogDate date = printf "%04d-%02d-%02d %02d" (getYear date) (getMonth date)
+    let formatLogDate date = printf "%04d-%02d-%02d %02d" (getYear date) (getMonth date)
                             (getDay date) (getHour date)
-        aggregate = foldl' (\acc logLine -> case acc of
-                                                (date, clone, fetch, shallowClone, push)
-                                                    -> let !clone'          = if isClone logLine then clone + 1 else clone
-                                                           !fetch'          = if isFetch logLine then fetch + 1 else fetch
-                                                           !shallowClone'   = if isShallowClone logLine then shallowClone + 1 else shallowClone
-                                                           !push'           = if isPush logLine then push + 1 else push
-                                                           !date'           = if null date then formatLogDate $ getDate logLine else date
-                                                           in (date', clone', fetch', shallowClone', push')
-                            ) ("", 0,0,0,0)
-    in map aggregate groups
+    in plotGitOperations' logDateEqHour formatLogDate rawLines
 
+plotGitOperations' :: (Num a) => (LogDate -> LogDate -> Bool) -> (LogDate -> String) -> Input -> [GitOperation a]
+plotGitOperations' comp formatLogDate rawLines =
+    let groups = groupBy (comp `on` getDate) $ parseLines rawLines
+    in map (summarizeGitOperations formatLogDate) groups
+
+
+summarizeGitOperations :: (Num a) => (LogDate -> String) -> [LogLine] -> GitOperation a
+summarizeGitOperations formatLogDate = foldl' aggregate ("", 0,0,0,0)
+                where aggregate = (\acc logLine -> case acc of
+                                        (date, clone, fetch, shallowClone, push)
+                                            -> let !clone'          = if isClone logLine then clone + 1 else clone
+                                                   !fetch'          = if isFetch logLine then fetch + 1 else fetch
+                                                   !shallowClone'   = if isShallowClone logLine then shallowClone + 1 else shallowClone
+                                                   !push'           = if isPush logLine then push + 1 else push
+                                                   !date'           = if null date then formatLogDate $ getDate logLine else date
+                                                   in (date', clone', fetch', shallowClone', push'))
 
 
 showLines :: Input -> [Maybe LogLine]
