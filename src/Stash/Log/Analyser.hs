@@ -32,8 +32,8 @@ type Input = [L.ByteString]
 
 type GitOperation a = (String, a, a, a, a)
 
-countLines :: Input -> Integer
-countLines = fromIntegral . length
+countLines :: L.ByteString -> Integer
+countLines input = toInteger $ L.count '\n' input
 
 countRequestLines :: Input -> Integer
 countRequestLines = countLinesWith (\x acc -> let rid = getRequestId x

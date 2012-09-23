@@ -29,7 +29,7 @@ dispatch cmd = action
         err _  = putStrLn $ "Error: " ++ cmd ++ " is not a valid command."
 
 actions :: [(Command, FilePath -> IO ())]
-actions = [("count",                parseAndPrint countLines)
+actions = [("count",                printCountLines countLines)
           ,("countRequests",        parseAndPrint countRequestLines)
           --,("show",                 parseAndPrint showLines) -- Useful for dev
           ,("maxConn",              parseAndPrint maxConcurrent)
@@ -50,6 +50,9 @@ generatePlotDataConcurrentConn f path = do
 
 parseAndPrint :: (Show a) => (Input -> a) -> FilePath -> IO ()
 parseAndPrint f path = print . f . L.lines =<< L.readFile path
+
+printCountLines :: (Show a) => (L.ByteString -> a) -> FilePath -> IO ()
+printCountLines f path = print . f =<< L.readFile path
 
 mapToTopList :: (Input -> [(S.ByteString, Integer)]) -> FilePath -> IO ()
 mapToTopList f path = do
