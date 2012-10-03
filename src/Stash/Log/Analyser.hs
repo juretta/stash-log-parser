@@ -59,9 +59,10 @@ countLinesWith f = foldl' count' 0
     where count' acc l = maybe acc (`f` acc) $ parseLogLine l
 
 protocolCount :: Input -> [(S.ByteString,Integer)]
-protocolCount logLines = M.toList . foldl' count' M.empty $ mapMaybe parseLogLine logLines
+protocolCount = M.toList . foldl' count' M.empty . mapMaybe parseLogLine
         where
-            count' acc logLine = M.insertWith (+) (S.copy (getProtocol logLine)) 1 acc
+            count' acc logLine = let !proto = getProtocol logLine
+                                 in M.insertWith (+) proto 1 acc
 
 inLabel :: LogLine -> String -> Bool
 inLabel logLine name =  let labels = getLabels logLine
@@ -146,8 +147,7 @@ summarizeGitOperations formatLogDate = foldl' aggregate emptyStats . filter isOu
 
 
 showLines :: Input -> [Maybe LogLine]
-showLines lines_ = take 5 $ map parseLogLine lines_
-
+showLines = take 5 . map parseLogLine
 
 logDateEqMin :: LogDate -> LogDate -> Bool
 logDateEqMin a b = logDateEqHour a b &&
