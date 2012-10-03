@@ -22,10 +22,6 @@ instance Arbitrary L.ByteString where
 ------------------------------------------------------------------------
 -- * Properties
 
--- | countLines
-prop_countLines :: [L.ByteString] -> Bool
-prop_countLines lines = (fromIntegral $ length lines) == countLines lines
-
 
 ------------------------------------------------------------------------
 
@@ -35,6 +31,9 @@ test_logLineParserEmpty = H.assertEqual
   ( parseLogLine "" )
 
 parsedLogLine = parseLogLine inputLine
+    where inputLine = "63.246.22.196,172.16.3.45 | https | i1112x6x32 | ssaasen | 2012-08-22 18:32:08,505 | \"GET /git/ATLASSIAN/jira.git/info/refs HTTP/1.1\" | \"\" \"git/1.7.4.1\" | fetch | - | - | "
+
+parsedLogLine2 = parseLogLine inputLine
     where inputLine = "63.246.22.196,172.16.3.45 | https | i1112x6x32 | - | 2012-08-22 18:32:08,505 | \"GET /git/ATLASSIAN/jira.git/info/refs HTTP/1.1\" | \"\" \"git/1.7.4.1\" | fetch | - | - | "
 
 test_parseLogEntryDate = H.assertEqual
@@ -53,8 +52,8 @@ test_logLineParseProtocol = H.assertEqual
 
 test_logLineParseAction = H.assertEqual
     "Should parse the labels correctly"
-    "\"GET /git/ATLASSIAN/jira.git/info/refs HTTP/1.1\""
-    (getAction $ fromJust parsedLogLine)
+    "/git/ATLASSIAN/jira.git/info/refs"
+    (getPath $ getAction $ fromJust parsedLogLine)
 
 test_logLineParseDetails = H.assertEqual
     "Should parse the labels correctly"
@@ -80,6 +79,16 @@ test_logLineParseRequestIdConcurrent = H.assertEqual
     "Should parse the request id -> concurrent requests"
     32
     (getConcurrentRequests $ getRequestId $ fromJust parsedLogLine)
+
+test_logLineParseUsernameAsJust = H.assertEqual
+    "Should parse a username"
+    (Just "ssaasen")
+    (getUsername $ fromJust parsedLogLine)
+
+test_logLineParseUsernameAsNothing = H.assertEqual
+    "Should parse a username"
+    Nothing
+    (getUsername $ fromJust parsedLogLine2)
 
 ------------------------------------------------------------------------
 -- Analyser
@@ -138,8 +147,8 @@ main = defaultMain tests
 tests :: [Test]
 tests =
     [ testGroup "analyser"
-      [ testProperty "analyser/countLines" prop_countLines
-        ,testCase "analyser/maxConcurrent" test_maxConcurrent
+      [ --testProperty "analyser/countLines" prop_countLines
+        testCase "analyser/maxConcurrent" test_maxConcurrent
         ,testCase "analyser/protocolCount" test_protocolCount
         ,testCase "analyser/dataConcurrentConn logDateEqMin" test_plotDataConcurrentConn
         ,testCase "analyser/dataConcurrentConn logDateEqHour" test_plotDataConcurrentConnHour
@@ -155,5 +164,7 @@ tests =
         ,testCase "parser/parse request counter" test_logLineParseRequestIdCounter
         ,testCase "parser/parse request concurrent requests" test_logLineParseRequestIdConcurrent
         ,testCase "parser/parse log entry date" test_parseLogEntryDate
+        ,testCase "parser/parse username (Just)" test_logLineParseUsernameAsJust
+        ,testCase "parser/parse username (Nothing)" test_logLineParseUsernameAsNothing
       ]
     ]

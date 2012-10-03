@@ -4,7 +4,7 @@ module Stash.Log.Analyser
 ( countLines
 , countRequestLines
 , Input
-, GitOperation
+, GitOperationStats(..)
 , DateValuePair(..)
 , maxConcurrent
 , protocolCount
@@ -18,7 +18,7 @@ import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Lazy.Char8 as L
 import qualified Data.HashMap.Strict as M
 import Data.List (foldl', groupBy)
-import Data.Maybe (mapMaybe)
+import Data.Maybe (mapMaybe, isJust)
 import Data.Function (on)
 import Text.Printf (printf)
 import Stash.Log.Parser
@@ -30,8 +30,19 @@ data DateValuePair = DateValuePair {
 
 type Input = [L.ByteString]
 
-type GitOperation a = (String, a, a, a, a)
+data GitOperationStats = GitOperationStats {
+     getOpStatDate          :: String
+    ,numFetch               :: Int
+    ,numClone               :: Int
+    ,numPush                :: Int
+    ,numShallowClone        :: Int
+    ,numRefAdvertisement    :: Int
+}
 
+emptyStats :: GitOperationStats
+emptyStats = GitOperationStats "" 0 0 0 0 0
+
+-- | Count the number of lines in the given input file
 countLines :: L.ByteString -> Integer
 countLines input = toInteger $ L.count '\n' input
 
@@ -55,6 +66,15 @@ protocolCount logLines = M.toList . foldl' count' M.empty $ mapMaybe parseLogLin
 inLabel :: LogLine -> String -> Bool
 inLabel logLine name =  let labels = getLabels logLine
                         in name `elem` labels
+
+
+isRefAdvertisement :: LogLine -> Bool
+isRefAdvertisement logLine = ".git/info/refs" `S.isSuffixOf` path && "GET" == method && isJust username
+            where
+                action      = getAction logLine
+                path        = getPath action
+                method      = getMethod action
+                username    = getUsername logLine
 
 isFetch :: LogLine -> Bool
 isFetch logLine = inLabel logLine "fetch" && not (inLabel logLine "clone" || inLabel logLine "shallow clone")
@@ -101,28 +121,28 @@ parseLines = mapMaybe parseLogLine
 
 -- Example Output
 -- (Date, clone, fetch, shallow clone, push)
-plotGitOperations :: (Num a) => Input -> [GitOperation a]
+plotGitOperations :: Input -> [GitOperationStats]
 plotGitOperations rawLines =
     let formatLogDate date = printf "%04d-%02d-%02d %02d" (getYear date) (getMonth date)
                             (getDay date) (getHour date)
     in plotGitOperations' logDateEqHour formatLogDate rawLines
 
-plotGitOperations' :: (Num a) => (LogDate -> LogDate -> Bool) -> (LogDate -> String) -> Input -> [GitOperation a]
+plotGitOperations' :: (LogDate -> LogDate -> Bool) -> (LogDate -> String) -> Input -> [GitOperationStats]
 plotGitOperations' comp formatLogDate rawLines =
     let groups = groupBy (comp `on` getDate) $ parseLines rawLines
     in map (summarizeGitOperations formatLogDate) groups
 
-
-summarizeGitOperations :: (Num a) => (LogDate -> String) -> [LogLine] -> GitOperation a
-summarizeGitOperations formatLogDate = foldl' aggregate ("", 0,0,0,0)
-                where aggregate = (\acc logLine -> case acc of
-                                        (date, clone, fetch, shallowClone, push)
+summarizeGitOperations :: (LogDate -> String) -> [LogLine] -> GitOperationStats
+summarizeGitOperations formatLogDate = foldl' aggregate emptyStats . filter isOutgoingLogLine
+                where aggregate acc logLine = case acc of
+                                        GitOperationStats date clone fetch shallowClone push refAd
                                             -> let !clone'          = if isClone logLine then clone + 1 else clone
                                                    !fetch'          = if isFetch logLine then fetch + 1 else fetch
                                                    !shallowClone'   = if isShallowClone logLine then shallowClone + 1 else shallowClone
                                                    !push'           = if isPush logLine then push + 1 else push
                                                    !date'           = if null date then formatLogDate $ getDate logLine else date
-                                                   in (date', clone', fetch', shallowClone', push'))
+                                                   !refAd'          = if isRefAdvertisement logLine then refAd + 1 else refAd
+                                                   in GitOperationStats date' clone' fetch' shallowClone' push' refAd'
 
 
 showLines :: Input -> [Maybe LogLine]

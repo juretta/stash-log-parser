@@ -38,10 +38,10 @@ actions = [("count",                printCountLines countLines)
           ,("plotGitOperations",    generatePlotDataGitOps plotGitOperations)
           ,("protocol",             mapToTopList protocolCount)]
 
-generatePlotDataGitOps :: (Input -> [(String, Int, Int, Int, Int)]) -> FilePath -> IO ()
+generatePlotDataGitOps :: (Input -> [GitOperationStats]) -> FilePath -> IO ()
 generatePlotDataGitOps f path = do
         plotData <- liftM f $ toLines path
-        mapM_ (\(date, a, b, c, d)  -> printf "%s|%d|%d|%d|%d\n" date a b c d) plotData
+        mapM_ (\(GitOperationStats date a b c d e)  -> printf "%s|%d|%d|%d|%d|%d\n" date a b c d e) plotData
 
 generatePlotDataConcurrentConn :: (Input -> [DateValuePair]) -> FilePath -> IO ()
 generatePlotDataConcurrentConn f path = do

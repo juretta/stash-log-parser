@@ -1,13 +1,15 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Stash.Log.Parser
-( InOurOut
+( Action(..)
+, InOurOut
 , RequestId(..)
 , LogLine(..)
 , LogDate(..)
 , parseLogLine
 , isIncoming
 , isOutgoing
+, isOutgoingLogLine
 ) where
 
 import qualified Data.Attoparsec.Lazy as AL
@@ -21,6 +23,12 @@ import Data.String.Utils (split)
 -- REMOTE_ADRESS | PROTOCOL | (o|i)REQUEST_ID | USERNAME | date |  URL | DETAILS | LABELS | TIME | SESSION_ID |
 -- REQUEST_ID -> MINUTE_OF_DAYxREQUEST_COUNTERxCONCURRENT_REQUESTS
 
+data Action = Action {
+     getMethod       :: S.ByteString
+    ,getPath         :: S.ByteString
+    ,getVersion      :: S.ByteString
+} deriving (Show, Eq)
+
 data InOurOut = In | Out deriving (Show, Eq)
 
 data RequestId = RequestId {
@@ -33,9 +41,9 @@ data LogLine = LogLine {
      getRemoteAdress        :: S.ByteString
     ,getProtocol            :: S.ByteString
     ,getRequestId           :: RequestId
-    ,getUsername            :: S.ByteString
+    ,getUsername            :: Maybe S.ByteString
     ,getDate                :: LogDate
-    ,getAction              :: S.ByteString
+    ,getAction              :: Action
     ,getDetails             :: S.ByteString
     ,getLabels              :: [String]
     ,getRequestDuration     :: S.ByteString
@@ -64,14 +72,18 @@ isIncoming rid = getInOrOut rid == 'i'
 isOutgoing :: RequestId -> Bool
 isOutgoing rid = getInOrOut rid == 'o'
 
+isOutgoingLogLine :: LogLine -> Bool
+isOutgoingLogLine = isOutgoing . getRequestId
+
 -- =================================================================================
 
-pipe, space, dash, colon, comma, x :: Parser Char
+pipe, space, dash, colon, comma, quote, x :: Parser Char
 pipe        = satisfy (== '|')
 space       = satisfy (== ' ')
 dash        = satisfy (== '-')
 colon       = satisfy (== ':')
 comma       = satisfy (== ',')
+quote       = satisfy (== '"')
 x           = satisfy (== 'x')
 
 -- 2012-08-22 18:32:08,505
@@ -120,20 +132,34 @@ separator = do
     pipe
     space
 
+parseAction :: Parser Action
+parseAction = do
+    quote
+    method <- takeTill (== ' ')
+    space
+    path <- takeTill (== ' ')
+    space
+    version <- takeTill (== '"')
+    quote
+    separator
+    return $ Action method path version
+
+
 -- | Parse an access log line
 parseLine :: Parser LogLine
 parseLine = do
     remoteAddress <- logEntry
     protocol <- logEntry
     requestId <- parseRequestId
-    username <- logEntry
+    rawUsername <- logEntry
     date <- parseLogEntryDate
-    action <- logEntry
+    action <- parseAction
     details <- logEntry
     labels_ <- logEntry
     duration <- logEntry
     sessionId <- logEntry
     let labels = split "," (S.unpack labels_)
+        username = if rawUsername == "-" then Nothing else Just rawUsername
     return $ LogLine remoteAddress protocol requestId username date
                     action details labels duration sessionId
 
