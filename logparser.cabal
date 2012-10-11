@@ -23,6 +23,7 @@ Test-Suite logparser-testsuite
                             MissingH,
                             HUnit,
                             containers,
+                            text,
                             unordered-containers,
                             QuickCheck >= 2.4.0.1
 
@@ -36,6 +37,7 @@ Executable logparser
                             MissingH,
                             attoparsec >= 0.10,
                             containers,
+                            text,
                             unordered-containers >= 0.2
     GHC-Options:
                             -Wall

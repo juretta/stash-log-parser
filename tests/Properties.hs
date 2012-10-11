@@ -31,7 +31,7 @@ test_logLineParserEmpty = H.assertEqual
   ( parseLogLine "" )
 
 parsedLogLine = parseLogLine inputLine
-    where inputLine = "63.246.22.196,172.16.3.45 | https | i1112x6x32 | ssaasen | 2012-08-22 18:32:08,505 | \"GET /git/ATLASSIAN/jira.git/info/refs HTTP/1.1\" | \"\" \"git/1.7.4.1\" | fetch | - | - | "
+    where inputLine = "63.246.22.196,172.16.3.45 | https | i1112x6x32 | ssaasen | 2012-08-22 18:32:08,505 | \"GET /git/ATLASSIAN/jira.git/info/refs HTTP/1.1\" | \"\" \"git/1.7.4.1\" | shallow clone | - | - | "
 
 parsedLogLine2 = parseLogLine inputLine
     where inputLine = "63.246.22.196,172.16.3.45 | https | i1112x6x32 | - | 2012-08-22 18:32:08,505 | \"GET /git/ATLASSIAN/jira.git/info/refs HTTP/1.1\" | \"\" \"git/1.7.4.1\" | fetch | - | - | "
@@ -62,7 +62,7 @@ test_logLineParseDetails = H.assertEqual
 
 test_logLineParseLabels = H.assertEqual
     "Should parse the labels correctly"
-    ["fetch"]
+    ["shallow clone"]
     (getLabels $ fromJust parsedLogLine)
 
 test_logLineParseRequestId = H.assertEqual

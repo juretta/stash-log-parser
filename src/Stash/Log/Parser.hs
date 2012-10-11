@@ -15,11 +15,11 @@ module Stash.Log.Parser
 import qualified Data.Attoparsec.Lazy as AL
 import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Lazy.Char8 as L
+import qualified Data.Text as T
 import Data.Attoparsec.Char8 hiding (char, space, take)
 import Prelude hiding (takeWhile)
 import Data.ByteString.Char8 (readInteger)
 import Data.String.Utils (split)
-
 -- REMOTE_ADRESS | PROTOCOL | (o|i)REQUEST_ID | USERNAME | date |  URL | DETAILS | LABELS | TIME | SESSION_ID |
 -- REQUEST_ID -> MINUTE_OF_DAYxREQUEST_COUNTERxCONCURRENT_REQUESTS
 
@@ -158,12 +158,19 @@ parseLine = do
     labels_ <- logEntry
     duration <- logEntry
     sessionId <- logEntry
-    let labels = split "," (S.unpack labels_)
+    let labels = map trim $ split "," (S.unpack labels_)
         username = if rawUsername == "-" then Nothing else Just rawUsername
     return $ LogLine remoteAddress protocol requestId username date
                     action details labels duration sessionId
 
+-- | Remove leading and trailing whitespace
+trim :: String -> String
+trim str = T.unpack $ T.strip $ T.pack str
+
 {-
 Example log line
 - 63.246.22.198,172.16.3.45 | https | o16x1402216x7 | cbac-confluence-user | 2012-09-08 00:17:00,270 | "GET /scm/ATLASSIAN/confluence.git/info/refs HTTP/1.1" | "" "JGit/unknown" | - | 1506 | - |
+
+Example log line after upgrading the clone cache plugin
+63.246.22.198,172.16.1.187 | https | o1116x10425x4 | cbac-confluence-user | 2012-10-10 18:36:02,078 | "GET /scm/ATLASSIAN/confluence.git/info/refs HTTP/1.1" | "" "JGit/unknown" | refs, cache:hit | 315 | s5ecvn |
 -}
