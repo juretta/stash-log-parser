@@ -41,7 +41,8 @@ actions = [("count",                printCountLines countLines)
 generatePlotDataGitOps :: (Input -> [GitOperationStats]) -> FilePath -> IO ()
 generatePlotDataGitOps f path = do
         plotData <- liftM f $ toLines path
-        mapM_ (\(GitOperationStats date a b c d e)  -> printf "%s|%d|%d|%d|%d|%d\n" date a b c d e) plotData
+        mapM_ (\(GitOperationStats date [a,b,c,d,e] [aHit,bHit,cHit,dHit,eHit]) -- clone, fetch, shallow clone, push, ref advertisement
+                -> printf "%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d\n" date (a+aHit) (b+bHit) (c+cHit) (d+dHit) (e+eHit) aHit bHit cHit dHit eHit a b c d e) plotData
 
 generatePlotDataConcurrentConn :: (Input -> [DateValuePair]) -> FilePath -> IO ()
 generatePlotDataConcurrentConn f path = do

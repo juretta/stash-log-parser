@@ -31,16 +31,14 @@ data DateValuePair = DateValuePair {
 type Input = [L.ByteString]
 
 data GitOperationStats = GitOperationStats {
-     getOpStatDate          :: String
-    ,numFetch               :: Int
-    ,numClone               :: Int
-    ,numPush                :: Int
-    ,numShallowClone        :: Int
-    ,numRefAdvertisement    :: Int
+     getOpStatDate              :: String
+    ,cacheMisses                :: [Int] -- clone, fetch, shallow clone, push, ref advertisement
+    ,cacheHits                  :: [Int]
 }
 
 emptyStats :: GitOperationStats
-emptyStats = GitOperationStats "" 0 0 0 0 0
+emptyStats = GitOperationStats "" zero zero
+        where zero = replicate 5 0
 
 -- | Count the number of lines in the given input file
 countLines :: L.ByteString -> Integer
@@ -69,6 +67,8 @@ inLabel logLine name =  let labels = getLabels logLine
                         in name `elem` labels
 
 
+-- As of 1.1.2 of the clone cache plugin, refs are explicitly listed in the
+-- labels field, most of the data we have does _not_ have that information though
 isRefAdvertisement :: LogLine -> Bool
 isRefAdvertisement logLine = ".git/info/refs" `S.isSuffixOf` path && "GET" == method && isJust username
             where
@@ -76,6 +76,12 @@ isRefAdvertisement logLine = ".git/info/refs" `S.isSuffixOf` path && "GET" == me
                 path        = getPath action
                 method      = getMethod action
                 username    = getUsername logLine
+
+isCacheHit :: LogLine -> Bool
+isCacheHit logLine = inLabel logLine "cache:hit"
+
+isCacheMiss :: LogLine -> Bool
+isCacheMiss = not . flip inLabel "cache:hit" -- treat as cache miss if the cache:* label is missing
 
 isFetch :: LogLine -> Bool
 isFetch logLine = inLabel logLine "fetch" && not (inLabel logLine "clone" || inLabel logLine "shallow clone")
@@ -133,17 +139,27 @@ plotGitOperations' comp formatLogDate rawLines =
     let groups = groupBy (comp `on` getDate) $ parseLines rawLines
     in map (summarizeGitOperations formatLogDate) groups
 
+
+cachedOperation :: (LogLine -> Bool) -> LogLine -> Bool
+cachedOperation op logLine = op logLine && isCacheHit logLine
+
+uncachedOperation :: (LogLine -> Bool) -> LogLine -> Bool
+uncachedOperation op logLine = op logLine && isCacheMiss logLine
+
+updateStats :: (LogDate -> String) -> GitOperationStats -> LogLine -> GitOperationStats
+updateStats formatLogDate (GitOperationStats date misses hits) logLine =
+                            let ops         = [isClone, isFetch, isShallowClone, isPush, isRefAdvertisement]
+                                inc op      = if op logLine then (+1) else (+0)
+                                missOps     = map (inc . uncachedOperation) ops
+                                hitOps      = map (inc . cachedOperation) ops
+                                !date'      = if null date then formatLogDate $ getDate logLine else date
+                                !misses'    = zipWith id missOps misses
+                                !hits'      = zipWith id hitOps hits
+                            in GitOperationStats date' misses' hits'
+
 summarizeGitOperations :: (LogDate -> String) -> [LogLine] -> GitOperationStats
 summarizeGitOperations formatLogDate = foldl' aggregate emptyStats . filter isOutgoingLogLine
-                where aggregate acc logLine = case acc of
-                                        GitOperationStats date clone fetch shallowClone push refAd
-                                            -> let !clone'          = if isClone logLine then clone + 1 else clone
-                                                   !fetch'          = if isFetch logLine then fetch + 1 else fetch
-                                                   !shallowClone'   = if isShallowClone logLine then shallowClone + 1 else shallowClone
-                                                   !push'           = if isPush logLine then push + 1 else push
-                                                   !date'           = if null date then formatLogDate $ getDate logLine else date
-                                                   !refAd'          = if isRefAdvertisement logLine then refAd + 1 else refAd
-                                                   in GitOperationStats date' clone' fetch' shallowClone' push' refAd'
+                        where aggregate = updateStats formatLogDate
 
 
 showLines :: Input -> [Maybe LogLine]
