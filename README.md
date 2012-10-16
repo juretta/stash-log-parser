@@ -27,7 +27,7 @@ Run
 E.g. to generate the "Max connection per hour" graph:
 
     $> ./dist/build/logparser/logparser plotConnHour data/stash-access-log/aggregated.log +RTS -sstderr > plot-all
-    $> gnuplot < generate-max-conn-plot.plot-all
+    $> gnuplot < ./gnuplot/generate-max-conn-plot.plot
 
 Show the number of request:
 
@@ -44,7 +44,11 @@ Invoking the logparser without arguments lists the available commands:
 Access log notes
 ================
 
+If the clone cache plugin is installed, additional information will be
+available in the labels section of the access log line.
 
+As of 1.1.2, the clone cache plugin adds whether the response was a cache hit
+or a cache miss.
 
 HTTP(s)/Authenticated
 ---------------------
