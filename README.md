@@ -10,6 +10,9 @@ If any of the dependencies are missing run:
 
     $> cabal install --only-dependencies
 
+To copy it into the cabal bin directory that should be in the $PATH, run
+
+    $> cabal copy
 
 Tests
 =====
