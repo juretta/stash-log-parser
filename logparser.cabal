@@ -34,6 +34,7 @@ test-suite logparser-testsuite
 executable logparser
     main-is:                Main.hs
     hs-source-dirs:         src
+    other-modules:          Stash.Log.Analyser, Stash.Log.Parser
     build-depends:          base < 5 && >= 3,
                             bytestring >= 0.9,
                             old-locale,
