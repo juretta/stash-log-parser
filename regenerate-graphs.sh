@@ -6,14 +6,10 @@ set -u
 
 rm -f *.png
 
+
 # Ensure that 'logparser' is in the PATH (e.g. run rebuild.sh or 'cabal copy')
 
-# Stash prod
-LOG_FILE="../access-logs/aggregated-log-file"
-
-# Rakuten
-#LOG_FILE="../customer-access-logs/rakuten/aggregated-log-file"
-
+LOG_FILE=${1:-"../access-logs/aggregated-log-file"}
 
 time logparser plotGitOperations ${LOG_FILE} +RTS -sstderr > plot-git-ops
 gnuplot < gnuplot/generate-git-ops-plot.plot
