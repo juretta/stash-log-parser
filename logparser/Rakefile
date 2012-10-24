@@ -1,9 +1,18 @@
+require 'fileutils'
+
+begin
+  require 'sysinfo'
+rescue LoadError
+  puts "Please install the sysinfo gem first"
+  exit -1
+end
 
 ARTIFACT="dist/build/logparser/logparser".freeze
 
 desc "Clean build artifacts"
 task :clean do
   cabal 'clean'
+  `rm -f logparser-*.tar.gz`
 end
 
 desc "Create the logparser binary"
@@ -16,8 +25,21 @@ end
 
 desc "Build and package the logparser"
 task :package => :build do
-  `tar zfc logparser-#{RUBY_PLATFORM}-#{version}.tar.gz LICENSE NOTICE -C.. README.md -Clogparser/dist/build/logparser logparser`
+  include FileUtils
+  with_temp_dir "logparser" do |package_dir|
+    cp "../README.md", package_dir
+    %w(NOTICE LICENSE).each {|f| cp f, package_dir }
+    bin_dir = File.join(package_dir, "bin")
+    mkdir bin_dir
+    cp ARTIFACT, bin_dir
+    cp_r "../gnuplot", package_dir
+    cp Dir["../*.sh"], package_dir
+    sysinfo = SysInfo.new
+    `tar zfc logparser-#{sysinfo.impl}-#{sysinfo.arch}-#{version}.tar.gz logparser`
+  end
 end
+
+
 
 desc "Rebuild and copy the logparser into the cabal bin directory"
 task :rebuild => :build do
@@ -38,4 +60,12 @@ end
 
 def cabal(cmd)
   print `cabal #{cmd}`
+end
+
+def with_temp_dir(name)
+  raise "The directory #{name} already exists" if File.directory?(name)
+  mkdir name
+  yield name
+ensure
+  rm_r name
 end
