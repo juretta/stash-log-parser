@@ -7,6 +7,7 @@ license-file:           LICENSE
 author:                 Stefan Saasen
 maintainer:             Stefan Saasen <ssaasen@atlassian.com>
 build-type:             Simple
+extra-source-files:     README.md
 category:               Logging
 cabal-version:          >=1.8
 
