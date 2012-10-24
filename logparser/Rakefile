@@ -1,0 +1,25 @@
+
+ARTIFACT="dist/build/logparser/logparser".freeze
+
+desc "Clean build artifacts"
+task :clean do
+  `cabal clean`
+end
+
+desc "Create the logparser binary"
+task :build => :clean do
+  %w(configure build).each do |cmd|
+    `cabal #{cmd}`
+  end
+  `strip #{ARTIFACT}`
+end
+
+desc "Build and package the logparser"
+task :package => :build do
+  `tar zfc logparser.tar.gz LICENSE NOTICE -C.. README.md -Clogparser/dist/build/logparser logparser`
+end
+
+desc "Rebuild and copy the logparser into the cabal bin directory"
+task :rebuild => :build do
+  `cabal copy`
+end
