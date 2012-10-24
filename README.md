@@ -1,67 +1,49 @@
-Build
-=====
+Atlassian Stash access log parser
+=================================
 
-To build the logparser run
+The log parser parses and aggregates the access logs of the Atlassian Stash web
+application.
 
-    $> cabal configure
-    $> cabal build
+Installation
+------------
 
-If any of the dependencies are missing run:
+Download the pre-built binaries for your platform from:
 
-    $> cabal install --only-dependencies
+https://bitbucket.org/ssaasen/stash-log-parser/downloads
 
-To copy it into the cabal bin directory that should be in the $PATH, run
+The `logparser` binary supports multiple commands and currently expects
+a single logfile as an argument.
 
-    $> cabal copy
+E.g.
 
-Tests
-=====
+    $> logparser gitOperations FILEPATH
 
-Enable tests
+Note: To combine multiple log files into a single file use:
 
-    $> cabal configure --enable-tests
-    $> cabal build
-    $> cabal test
+    $> cat atlassian-stash-access-2012-0*.log > aggregated-log-file
 
+Executing `logparser` will show the help with a list of supported commands.
 
-Run
-===
+The logparser will parse, analyze and aggregate the log files and prints the
+aggregated records to STDOUT.
 
-E.g. to generate the "Max connection per hour" graph:
-
-    $> ./dist/build/logparser/logparser plotConnHour data/stash-access-log/aggregated.log +RTS -sstderr > plot-all
-    $> gnuplot < ./gnuplot/generate-max-conn-plot.plot
-
-Show the number of request:
-
-    $> ./dist/build/logparser/logparser countRequests data/stash-access-log/aggregated.log
-    1582017
-
-Invoking the logparser without arguments lists the available commands:
-
-    $> ./dist/build/logparser/logparser
-    logparser: Invoke with <cmd> <path-to-log-file>
-
-    Available commands: ["count","countRequests","maxConn","plotConnMinute","plotConnHour","plotGitOperations","protocol"]
-
-Access log notes
-================
-
-If the clone cache plugin is installed, additional information will be
-available in the labels section of the access log line.
-
-As of 1.1.2, the clone cache plugin adds whether the response was a cache hit
-or a cache miss.
-
-HTTP(s)/Authenticated
----------------------
+E.g. for the `gitOperations` command that shows the number of git operations
+per hour, the output will look like this:
 
 
-Up-to-date fetch/ls-remote:
+    [922] λ > logparser gitOperations aggregated.log 
+    2012-08-22 18|2|0|13|0|733|0|0|0|0|0|2|0|13|0|733
+    2012-08-22 19|3|24|74|0|1660|0|0|0|0|0|3|24|74|0|1660
+    2012-08-22 20|2|33|119|0|1369|0|0|0|0|0|2|33|119|0|1369
+    2012-08-22 21|1|12|49|0|1514|0|0|0|0|0|1|12|49|0|1514
 
-    59.167.133.99,172.16.1.187 | https | i48x27018x1 | - | 2012-09-20 00:48:05,425 | "GET /scm/TEST/stefan-test.git/info/refs HTTP/1.1" | "" "git/1.7.11.4" | - | - | - | 
-    59.167.133.99,172.16.1.187 | https | o48x27018x1 | - | 2012-09-20 00:48:05,435 | "GET /scm/TEST/stefan-test.git/info/refs HTTP/1.1" | "" "git/1.7.11.4" | - | 10 | - | 
-    59.167.133.99,172.16.1.187 | https | i48x27019x1 | - | 2012-09-20 00:48:05,648 | "GET /scm/TEST/stefan-test.git/info/refs HTTP/1.1" | "" "git/1.7.11.4" | - | - | - | 
-    59.167.133.99,172.16.1.187 | https | o48x27019x1 | ssaasen | 2012-09-20 00:48:05,837 | "GET /scm/TEST/stefan-test.git/info/refs HTTP/1.1" | "" "git/1.7.11.4" | - | 189 | 1iufqo7 | 
+The fields are `|` separated. The first column usually contains a date field
+(using a 60 minute granularity). The format of the remaining columns depends on
+the command that is being used.
 
-First response is a 401, seconds a 200 with the ref advertisement
+
+The output can be used to generate graphs, either using the provided `gnuplot`
+scripts or by using the Confluence chart macro.
+
+The `regenerate-graphs.sh` shows how to run the logparser, pipe the output into
+data files and generate gnuplot graphics using the PNG format.
