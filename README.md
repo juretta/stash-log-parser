@@ -9,7 +9,7 @@ Installation
 
 Download the pre-built binaries for your platform from:
 
-https://bitbucket.org/ssaasen/stash-log-parser/downloads
+[https://bitbucket.org/ssaasen/stash-log-parser/downloads](https://bitbucket.org/ssaasen/stash-log-parser/downloads)
 
 The `logparser` binary supports multiple commands and currently expects
 a single logfile as an argument.
