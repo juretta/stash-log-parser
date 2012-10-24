@@ -1,43 +1,86 @@
 module Main where
 
-import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Lazy.Char8 as L
 import Stash.Log.Parser
 import Stash.Log.Analyser
-import System.Environment (getArgs)
+import Data.Default
+import UI.Command
 import Prelude hiding (takeWhile)
-import Data.Maybe (fromMaybe)
 import Text.Printf (printf)
-import Data.List (sortBy)
 import Control.Monad (liftM)
+import Control.Monad.Trans (liftIO)
 
 -- =================================================================================
 
-type Command = String
+logparser :: Application () ()
+logparser = def {
+                appName = "logparser",
+                appVersion = "0.1",
+                appAuthors = ["Stefan Saasen"],
+                appBugEmail = "ssaasen@atlassian.com",
+                appCategories = ["Logfile analysis", "Debug"],
+                appShortDesc = "Logparser for the Atlassian Stash access logs",
+                appLongDesc = "Parses and aggregates the access logs of Atlassian Stash",
+                appCmds = [count, countRequests, maxConn, summarizeGitOperations, summarizeProtocolStats, debugParser ]
+        }
+
+
+count, countRequests, maxConn, summarizeGitOperations, summarizeProtocolStats, debugParser :: Command ()
+count = defCmd {
+                cmdName = "count",
+                cmdHandler = commandHandler $ printCountLines countLines,
+                cmdCategory = "Logfile analysis",
+                cmdShortDesc = "Count the number of lines in the given logfile"
+        }
+
+countRequests = defCmd {
+                cmdName = "countRequests",
+                cmdHandler = commandHandler $ parseAndPrint countRequestLines,
+                cmdCategory = "Logfile analysis",
+                cmdShortDesc = "Count the number requests"
+        }
+
+maxConn = defCmd {
+                cmdName = "maxConn",
+                cmdHandler = commandHandler $ parseAndPrint maxConcurrent,
+                cmdCategory = "Logfile analysis",
+                cmdShortDesc = "Show the maximum number of concurrent requests per hour"
+        }
+
+summarizeGitOperations = defCmd {
+                cmdName = "gitOperations",
+                cmdHandler = commandHandler $ generatePlotDataGitOps plotGitOperations,
+                cmdCategory = "Logfile analysis",
+                cmdShortDesc = "Aggregate git operations per hour. Show counts for fetch, clone, push, pull and ref advertisement"
+        }
+
+summarizeProtocolStats = defCmd {
+                cmdName = "protocolStats",
+                cmdHandler = commandHandler $ generateProtocolData protocolStatsByHour,
+                cmdCategory = "Logfile analysis",
+                cmdShortDesc = "Aggregate the number of git operations per hour based on the access protocol (http(s) vs. SSH)"
+        }
+
+debugParser = defCmd {
+                cmdName = "debugParser",
+                cmdHandler = commandHandler $ parseAndPrint showLines,
+                cmdCategory = "Debug",
+                cmdShortDesc = "Parse and print the first five lines of the log file"
+        }
+
+commandHandler f = do
+    args <- appArgs
+    case args of
+        (file:_)   -> liftIO $ f file
+        []          -> error "Path to logfile is missing"
+
 
 main :: IO ()
-main = do
-  args <- getArgs
-  case args of
-    [cmd, path] -> dispatch cmd path
-    _ -> error ("Invoke with <cmd> <path-to-log-file>" ++ "\n\nAvailable commands: " ++ show (map fst actions))
+main = appMain logparser
 
-dispatch :: Command -> FilePath -> IO ()
-dispatch cmd = action
-    where
-        action = fromMaybe err (lookup cmd actions)
-        err _  = putStrLn $ "Error: " ++ cmd ++ " is not a valid command."
-
-actions :: [(Command, FilePath -> IO ())]
-actions = [("count",                printCountLines countLines)
-          ,("countRequests",        parseAndPrint countRequestLines)
-          --,("show",                 parseAndPrint showLines) -- Useful for dev
-          ,("maxConn",              parseAndPrint maxConcurrent)
-          ,("plotConnMinute",       generatePlotDataConcurrentConn plotDataConcurrentConnMinute)
-          ,("plotConnHour",         generatePlotDataConcurrentConn plotDataConcurrentConnHour)
-          ,("plotGitOperations",    generatePlotDataGitOps plotGitOperations)
-          ,("plotProtocolStats",    generateProtocolData protocolStatsByHour)
-          ,("protocol",             mapToTopList protocolCount)]
+-- =================================================================================
+--
+-- =================================================================================
 
 generateProtocolData :: (Input -> [ProtocolStats]) -> FilePath -> IO ()
 generateProtocolData f path = do
@@ -61,13 +104,6 @@ parseAndPrint f path = print . f . L.lines =<< L.readFile path
 printCountLines :: (Show a) => (L.ByteString -> a) -> FilePath -> IO ()
 printCountLines f path = print . f =<< L.readFile path
 
-mapToTopList :: (Input -> [(S.ByteString, Integer)]) -> FilePath -> IO ()
-mapToTopList f path = do
-    result <- toLines path
-    let mostPopular (_,a) (_,b) = compare b a
-        m = f result
-    mapM_ putStrLn . zipWith pretty [1..] . take 10 . sortBy mostPopular $ m
-
 toLines :: FilePath -> IO [L.ByteString]
 toLines path = liftM L.lines $ L.readFile path
 
@@ -75,5 +111,3 @@ formatLogDate :: LogDate -> String
 formatLogDate date = printf "%04d-%02d-%02d %02d:%02d" (getYear date) (getMonth date)
                             (getDay date) (getHour date) (getMinute date)
 
-pretty :: Show a => Integer -> (a, Integer) -> String
-pretty i (bs, n) = printf "%d: %s, %d" i (show bs) n
