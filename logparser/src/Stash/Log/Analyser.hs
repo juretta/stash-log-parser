@@ -182,7 +182,7 @@ protocolStatsByHour rawLines = let  groups = groupBy (logDateEqHour `on` getDate
                                 in map (protocolStats formatLogDate) groups
 
 protocolStats :: (LogDate -> String) -> [LogLine] -> ProtocolStats
-protocolStats formatLogDate logLines = foldl' aggregate (ProtocolStats "" 0 0) logLines
+protocolStats formatLogDate = foldl' aggregate (ProtocolStats "" 0 0)
                         where aggregate (ProtocolStats date ssh http) logLine =
                                     let !ssh'   = if isSsh logLine then ssh + 1 else ssh
                                         !http'  = if isHttp logLine then http + 1 else http
