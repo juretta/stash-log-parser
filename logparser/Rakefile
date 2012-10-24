@@ -16,7 +16,7 @@ end
 
 desc "Build and package the logparser"
 task :package => :build do
-  `tar zfc logparser.tar.gz LICENSE NOTICE -C.. README.md -Clogparser/dist/build/logparser logparser`
+  `tar zfc logparser-#{RUBY_PLATFORM}.tar.gz LICENSE NOTICE -C.. README.md -Clogparser/dist/build/logparser logparser`
 end
 
 desc "Rebuild and copy the logparser into the cabal bin directory"
