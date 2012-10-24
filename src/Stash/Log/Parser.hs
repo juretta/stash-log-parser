@@ -26,7 +26,6 @@ import Data.String.Utils (split)
 data Action = Action {
      getMethod       :: S.ByteString
     ,getPath         :: S.ByteString
-    ,getVersion      :: S.ByteString
 } deriving (Show, Eq)
 
 data InOurOut = In | Out deriving (Show, Eq)
@@ -77,13 +76,14 @@ isOutgoingLogLine = isOutgoing . getRequestId
 
 -- =================================================================================
 
-pipe, space, dash, colon, comma, quote, x :: Parser Char
+pipe, space, dash, colon, comma, quote, single, x :: Parser Char
 pipe        = satisfy (== '|')
 space       = satisfy (== ' ')
 dash        = satisfy (== '-')
 colon       = satisfy (== ':')
 comma       = satisfy (== ',')
 quote       = satisfy (== '"')
+single      = satisfy (== '\'')
 x           = satisfy (== 'x')
 
 -- 2012-08-22 18:32:08,505
@@ -132,17 +132,35 @@ separator = do
     pipe
     space
 
+
+-- http: "GET /scm/CONF/confluence.git/info/refs HTTP/1.1"
+-- ssh: git-upload-pack '/CONF/teamcal.git'
 parseAction :: Parser Action
-parseAction = do
+parseAction = do choice [parseSshAction, parseHttpAction]
+
+parseSshAction :: Parser Action
+parseSshAction = do
+    method <- takeTill (== ' ')
+    space
+    single
+    path <- takeTill (== '\'')
+    single
+    separator
+    return $ Action method path
+
+
+
+parseHttpAction :: Parser Action
+parseHttpAction = do
     quote
     method <- takeTill (== ' ')
     space
     path <- takeTill (== ' ')
     space
-    version <- takeTill (== '"')
+    _ <- takeTill (== '"')
     quote
     separator
-    return $ Action method path version
+    return $ Action method path
 
 
 -- | Parse an access log line
