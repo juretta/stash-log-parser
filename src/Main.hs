@@ -36,7 +36,13 @@ actions = [("count",                printCountLines countLines)
           ,("plotConnMinute",       generatePlotDataConcurrentConn plotDataConcurrentConnMinute)
           ,("plotConnHour",         generatePlotDataConcurrentConn plotDataConcurrentConnHour)
           ,("plotGitOperations",    generatePlotDataGitOps plotGitOperations)
+          ,("plotProtocolStats",    generateProtocolData protocolStatsByHour)
           ,("protocol",             mapToTopList protocolCount)]
+
+generateProtocolData :: (Input -> [ProtocolStats]) -> FilePath -> IO ()
+generateProtocolData f path = do
+        plotData <- liftM f $ toLines path
+        mapM_ (\(ProtocolStats date ssh http) -> printf "%s|%d|%d\n" date ssh http) plotData
 
 generatePlotDataGitOps :: (Input -> [GitOperationStats]) -> FilePath -> IO ()
 generatePlotDataGitOps f path = do

@@ -19,3 +19,7 @@ gnuplot < gnuplot/generate-git-ops-plot-caching-fetch.plot
 
 time logparser plotConnHour ${LOG_FILE} +RTS -sstderr  > plot-all
 gnuplot < gnuplot/generate-max-conn-plot.plot
+
+
+time logparser plotProtocolStats ${LOG_FILE} > protocol-stats
+gnuplot < gnuplot/generate-git-protocol.plot

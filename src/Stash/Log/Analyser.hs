@@ -5,12 +5,14 @@ module Stash.Log.Analyser
 , countRequestLines
 , Input
 , GitOperationStats(..)
+, ProtocolStats(..)
 , DateValuePair(..)
 , maxConcurrent
 , protocolCount
 , plotDataConcurrentConnMinute
 , plotDataConcurrentConnHour
 , plotGitOperations
+, protocolStatsByHour
 , showLines
 ) where
 
@@ -29,6 +31,12 @@ data DateValuePair = DateValuePair {
 } deriving (Show, Eq)
 
 type Input = [L.ByteString]
+
+data ProtocolStats = ProtocolStats {
+     getProtocolLogDate     :: !String
+    ,getSsh                 :: !Int
+    ,getHttp                :: !Int
+}
 
 data GitOperationStats = GitOperationStats {
      getOpStatDate              :: String
@@ -94,6 +102,13 @@ isShallowClone logLine = inLabel logLine "shallow clone"
 
 isPush :: LogLine -> Bool
 isPush logLine = inLabel logLine "push"
+
+isSsh :: LogLine -> Bool
+isSsh logLine = getProtocol logLine == "ssh"
+
+isHttp :: LogLine -> Bool
+isHttp logLine = proto == "http" || proto == "https"
+                where proto = getProtocol logLine
 
 -- The concurrent connection data needs to be aggregated.
 -- Example
@@ -161,6 +176,18 @@ summarizeGitOperations :: (LogDate -> String) -> [LogLine] -> GitOperationStats
 summarizeGitOperations formatLogDate = foldl' aggregate emptyStats . filter isOutgoingLogLine
                         where aggregate = updateStats formatLogDate
 
+protocolStatsByHour :: Input -> [ProtocolStats]
+protocolStatsByHour rawLines = let  groups = groupBy (logDateEqHour `on` getDate) $ parseLines rawLines
+                                    formatLogDate date = printf "%04d-%02d-%02d %02d" (getYear date) (getMonth date) (getDay date) (getHour date)
+                                in map (protocolStats formatLogDate) groups
+
+protocolStats :: (LogDate -> String) -> [LogLine] -> ProtocolStats
+protocolStats formatLogDate logLines = foldl' aggregate (ProtocolStats "" 0 0) logLines
+                        where aggregate (ProtocolStats date ssh http) logLine =
+                                    let !ssh'   = if isSsh logLine then ssh + 1 else ssh
+                                        !http'  = if isHttp logLine then http + 1 else http
+                                        !date'  = if null date then formatLogDate $ getDate logLine else date
+                                    in ProtocolStats date' ssh' http'
 
 showLines :: Input -> [Maybe LogLine]
 showLines = take 5 . map parseLogLine
