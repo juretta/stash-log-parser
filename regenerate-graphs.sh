@@ -11,15 +11,12 @@ rm -f *.png
 
 LOG_FILE=${1:-"../access-logs/aggregated-log-file"}
 
-time logparser plotGitOperations ${LOG_FILE} +RTS -sstderr > plot-git-ops
+time logparser gitOperations ${LOG_FILE} +RTS -sstderr > plot-git-ops
 gnuplot < gnuplot/generate-git-ops-plot.plot
 gnuplot < gnuplot/generate-git-ref-advertisement-plot.plot
-gnuplot < gnuplot/generate-git-ops-plot-caching.plot
-gnuplot < gnuplot/generate-git-ops-plot-caching-fetch.plot
 
-time logparser plotConnHour ${LOG_FILE} +RTS -sstderr  > plot-all
+time logparser maxConn ${LOG_FILE} +RTS -sstderr  > plot-all
 gnuplot < gnuplot/generate-max-conn-plot.plot
 
-
-time logparser plotProtocolStats ${LOG_FILE} > protocol-stats
+time logparser protocolStats ${LOG_FILE} > protocol-stats
 gnuplot < gnuplot/generate-git-protocol.plot
