@@ -42,7 +42,7 @@ countRequests = defCmd {
 
 maxConn = defCmd {
                 cmdName = "maxConn",
-                cmdHandler = commandHandler $ parseAndPrint maxConcurrent,
+                cmdHandler = commandHandler $ generatePlotDataConcurrentConn plotDataConcurrentConnHour,
                 cmdCategory = "Logfile analysis",
                 cmdShortDesc = "Show the maximum number of concurrent requests per hour"
         }
