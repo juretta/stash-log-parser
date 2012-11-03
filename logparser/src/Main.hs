@@ -50,7 +50,7 @@ maxConn = defCmd {
 
 summarizeGitOperations = defCmd {
                 cmdName = "gitOperations",
-                cmdHandler = commandHandler $ generatePlotDataGitOps plotGitOperations,
+                cmdHandler = commandHandler $ generatePlotDataGitOps analyseGitOperations,
                 cmdCategory = "Logfile analysis",
                 cmdShortDesc = "Aggregate git operations per hour. Show counts for fetch, clone, push, pull and ref advertisement"
         }

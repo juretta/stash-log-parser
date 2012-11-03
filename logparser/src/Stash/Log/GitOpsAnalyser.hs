@@ -2,7 +2,7 @@
 
 module Stash.Log.GitOpsAnalyser
 ( GitOperationStats(..)
-, plotGitOperations
+, analyseGitOperations
 ) where
 
 import qualified Data.ByteString.Char8 as S
@@ -18,6 +18,15 @@ data GitOperationStats = GitOperationStats {
     ,cacheMisses                :: [Int] -- clone, fetch, shallow clone, push, ref advertisement
     ,cacheHits                  :: [Int]
 }
+
+-- | Parse and aggregate the log file input into a list of GitOperationStats
+analyseGitOperations :: Input -> [GitOperationStats]
+analyseGitOperations rawLines =
+    let formatLogDate date = printf "%04d-%02d-%02d %02d" (getYear date) (getMonth date)
+                            (getDay date) (getHour date)
+    in analyseGitOperations' logDateEqHour formatLogDate rawLines
+
+-- =================================================================================
 
 emptyStats :: GitOperationStats
 emptyStats = GitOperationStats "" zero zero
@@ -54,25 +63,22 @@ isPush logLine = inLabel logLine "push"
 inLabel :: LogLine -> String -> Bool
 inLabel logLine name =  let labels = getLabels logLine
                         in name `elem` labels
--- Example Output
--- (Date, clone, fetch, shallow clone, push)
-plotGitOperations :: Input -> [GitOperationStats]
-plotGitOperations rawLines =
-    let formatLogDate date = printf "%04d-%02d-%02d %02d" (getYear date) (getMonth date)
-                            (getDay date) (getHour date)
-    in plotGitOperations' logDateEqHour formatLogDate rawLines
-
-plotGitOperations' :: (LogDate -> LogDate -> Bool) -> (LogDate -> String) -> Input -> [GitOperationStats]
-plotGitOperations' comp formatLogDate rawLines =
-    let groups = groupBy (comp `on` getDate) $ parseLogLines rawLines
-    in map (summarizeGitOperations formatLogDate) groups
-
 
 cachedOperation :: (LogLine -> Bool) -> LogLine -> Bool
 cachedOperation op logLine = op logLine && isCacheHit logLine
 
 uncachedOperation :: (LogLine -> Bool) -> LogLine -> Bool
 uncachedOperation op logLine = op logLine && isCacheMiss logLine
+
+analyseGitOperations' :: (LogDate -> LogDate -> Bool) -> (LogDate -> String) -> Input -> [GitOperationStats]
+analyseGitOperations' comp formatLogDate rawLines =
+    let groups = groupBy (comp `on` getDate) $ parseLogLines rawLines
+    in map (summarizeGitOperations formatLogDate) groups
+
+
+summarizeGitOperations :: (LogDate -> String) -> [LogLine] -> GitOperationStats
+summarizeGitOperations formatLogDate = foldl' aggregate emptyStats . filter isOutgoingLogLine
+                        where aggregate = updateStats formatLogDate
 
 updateStats :: (LogDate -> String) -> GitOperationStats -> LogLine -> GitOperationStats
 updateStats formatLogDate (GitOperationStats date misses hits) logLine =
@@ -85,6 +91,3 @@ updateStats formatLogDate (GitOperationStats date misses hits) logLine =
                                 !hits'      = zipWith id hitOps hits
                             in GitOperationStats date' misses' hits'
 
-summarizeGitOperations :: (LogDate -> String) -> [LogLine] -> GitOperationStats
-summarizeGitOperations formatLogDate = foldl' aggregate emptyStats . filter isOutgoingLogLine
-                        where aggregate = updateStats formatLogDate
