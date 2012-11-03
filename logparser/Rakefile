@@ -40,7 +40,10 @@ task :package => :build do
   end
 end
 
-
+desc "Run Hlint on the sources"
+task :hlint => :build do
+  print `hlint src -c --report --utf8`
+end
 
 desc "Rebuild and copy the logparser into the cabal bin directory"
 task :rebuild => :build do
