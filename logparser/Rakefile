@@ -17,7 +17,9 @@ task :clean do
 end
 
 desc "Create the logparser binary"
-task :build => :clean do
+task :build => [:clean, :compile]
+
+task :compile do
   %w(configure build).each do |cmd|
     cabal cmd
   end
