@@ -6,7 +6,9 @@ module Stash.Log.Parser
 , RequestId(..)
 , LogLine(..)
 , LogDate(..)
+, Input
 , parseLogLine
+, parseLines
 , isIncoming
 , isOutgoing
 , isOutgoingLogLine
@@ -20,8 +22,11 @@ import Data.Attoparsec.Char8 hiding (char, space, take)
 import Prelude hiding (takeWhile)
 import Data.ByteString.Char8 (readInteger)
 import Data.String.Utils (split)
+import Data.Maybe (mapMaybe)
 -- REMOTE_ADRESS | PROTOCOL | (o|i)REQUEST_ID | USERNAME | date |  URL | DETAILS | LABELS | TIME | SESSION_ID |
 -- REQUEST_ID -> MINUTE_OF_DAYxREQUEST_COUNTERxCONCURRENT_REQUESTS
+
+type Input = [L.ByteString]
 
 data Action = Action {
      getMethod       :: S.ByteString
@@ -58,6 +63,10 @@ data LogDate = LogDate {
     ,getSeconds     :: !Int
     ,getMillis      :: !Int
 } deriving (Show, Eq)
+
+-- | Parse the input into a list of LogLines
+parseLines :: Input -> [LogLine]
+parseLines = mapMaybe parseLogLine
 
 -- | Parse a single log line.
 parseLogLine :: L.ByteString -> Maybe LogLine

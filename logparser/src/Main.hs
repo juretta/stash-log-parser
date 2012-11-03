@@ -3,6 +3,7 @@ module Main where
 import qualified Data.ByteString.Lazy.Char8 as L
 import Stash.Log.Parser
 import Stash.Log.Analyser
+import Stash.Log.GitOpsAnalyser
 import Data.Default
 import UI.Command
 import Prelude hiding (takeWhile)
