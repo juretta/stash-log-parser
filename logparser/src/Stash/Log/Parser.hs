@@ -8,7 +8,7 @@ module Stash.Log.Parser
 , LogDate(..)
 , Input
 , parseLogLine
-, parseLines
+, parseLogLines
 , isIncoming
 , isOutgoing
 , isOutgoingLogLine
@@ -65,8 +65,8 @@ data LogDate = LogDate {
 } deriving (Show, Eq)
 
 -- | Parse the input into a list of LogLines
-parseLines :: Input -> [LogLine]
-parseLines = mapMaybe parseLogLine
+parseLogLines :: Input -> [LogLine]
+parseLogLines = mapMaybe parseLogLine
 
 -- | Parse a single log line.
 parseLogLine :: L.ByteString -> Maybe LogLine

@@ -64,7 +64,7 @@ plotGitOperations rawLines =
 
 plotGitOperations' :: (LogDate -> LogDate -> Bool) -> (LogDate -> String) -> Input -> [GitOperationStats]
 plotGitOperations' comp formatLogDate rawLines =
-    let groups = groupBy (comp `on` getDate) $ parseLines rawLines
+    let groups = groupBy (comp `on` getDate) $ parseLogLines rawLines
     in map (summarizeGitOperations formatLogDate) groups
 
 

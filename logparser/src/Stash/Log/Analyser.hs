@@ -88,10 +88,10 @@ dataConcurrentConn eqf inxs = reverse $ uncurry (++) res
                                  else ([DateValuePair dateTime conn], prev : xs)
                      ([], xs)    -> ([DateValuePair dateTime conn], xs)
                      (_, _)      -> ([], [])
-            res = foldl' f ([],[]) $ parseLines inxs
+            res = foldl' f ([],[]) $ parseLogLines inxs
 
 protocolStatsByHour :: Input -> [ProtocolStats]
-protocolStatsByHour rawLines = let  groups = groupBy (logDateEqHour `on` getDate) $ parseLines rawLines
+protocolStatsByHour rawLines = let  groups = groupBy (logDateEqHour `on` getDate) $ parseLogLines rawLines
                                     formatLogDate date = printf "%04d-%02d-%02d %02d" (getYear date) (getMonth date) (getDay date) (getHour date)
                                 in map (protocolStats formatLogDate) groups
 
