@@ -58,6 +58,26 @@ task :test do
   end
 end
 
+desc "Update version to the next minor version, tag the result"
+task :bump_minor_version do
+  current_version = `git describe --tags`.strip.split("-").first.gsub(/^v/, '')
+  major, minor = current_version.split(".").map {|e| e.to_i}
+  next_version = [major, minor.next].join(".")
+
+  # Update version in Main
+  update_file(File.join("src", "Main.hs"), /appVersion = "[^"]+"/, "appVersion = \"#{next_version}\"")
+
+  # Update cabal file
+  update_file("logparser.cabal", /^version:.*$/, "version:                #{next_version}")
+
+  # Commit and tag
+  msg = "Bump version to #{next_version}"
+  puts msg
+  `git add -u`
+  `git commit -m "#{msg}"`
+  `git tag -a -m "#{msg}" v#{next_version}`
+end
+
 def version
   `git describe --tag --always`.strip
 end
@@ -73,3 +93,12 @@ def with_temp_dir(name)
 ensure
   rm_r name
 end
+
+
+def update_file(file, pattern, replace)
+  updated = IO.read(file)
+  File.open(file, "w") do |f|
+    f << updated.gsub(pattern, replace)
+  end
+end
+
