@@ -16,7 +16,7 @@ import Control.Monad.Trans (liftIO)
 logparser :: Application () ()
 logparser = def {
                 appName = "logparser",
-                appVersion = "1.0",
+                appVersion = "1.4",
                 appAuthors = ["Stefan Saasen"],
                 appBugEmail = "ssaasen@atlassian.com",
                 appCategories = ["Logfile analysis", "Debug"],
