@@ -72,8 +72,8 @@ debugParser = defCmd {
 commandHandler f = do
     args <- appArgs
     case args of
-        (file:_)   -> liftIO $ f file
-        []          -> error "Path to logfile is missing"
+        []          -> error "Path to logfile(s) is missing"
+        files       -> liftIO $ f files
 
 
 main :: IO ()
@@ -83,32 +83,36 @@ main = appMain logparser
 --
 -- =================================================================================
 
-generateProtocolData :: (Input -> [ProtocolStats]) -> FilePath -> IO ()
+generateProtocolData :: (Input -> [ProtocolStats]) -> [FilePath] -> IO ()
 generateProtocolData f path = do
         plotData <- liftM f $ toLines path
         mapM_ (\(ProtocolStats date ssh http) -> printf "%s|%d|%d\n" date ssh http) plotData
 
-generatePlotDataGitOps :: (Input -> [GitOperationStats]) -> FilePath -> IO ()
+generatePlotDataGitOps :: (Input -> [GitOperationStats]) -> [FilePath] -> IO ()
 generatePlotDataGitOps f path = do
         plotData <- liftM f $ toLines path
         mapM_ (\(GitOperationStats date [a,b,c,d,e] [aHit,bHit,cHit,dHit,eHit]) -- clone, fetch, shallow clone, push, ref advertisement
                 -> printf "%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d\n" date (a+aHit) (b+bHit) (c+cHit) (d+dHit) (e+eHit) aHit bHit cHit dHit eHit a b c d e) plotData
 
-generatePlotDataConcurrentConn :: (Input -> [DateValuePair]) -> FilePath -> IO ()
+generatePlotDataConcurrentConn :: (Input -> [DateValuePair]) -> [FilePath] -> IO ()
 generatePlotDataConcurrentConn f path = do
         plotData <- liftM f $ toLines path
         mapM_ (\pd -> printf "%s|%d\n" (formatLogDate $ getLogDate pd) (getValue pd)) plotData
 
-parseAndPrint :: (Show a) => (Input -> a) -> FilePath -> IO ()
-parseAndPrint f path = print . f . L.lines =<< L.readFile path
+parseAndPrint :: (Show a) => (Input -> a) -> [FilePath] -> IO ()
+parseAndPrint f path = print . f . L.lines =<< readFiles path
 
-printCountLines :: (Show a) => (L.ByteString -> a) -> FilePath -> IO ()
-printCountLines f path = print . f =<< L.readFile path
+printCountLines :: (Show a) => (L.ByteString -> a) -> [FilePath] -> IO ()
+printCountLines f path = print . f =<< readFiles path
 
-toLines :: FilePath -> IO [L.ByteString]
-toLines path = liftM L.lines $ L.readFile path
+toLines :: [FilePath] -> IO [L.ByteString]
+toLines = liftM L.lines . readFiles
 
 formatLogDate :: LogDate -> String
 formatLogDate date = printf "%04d-%02d-%02d %02d:%02d" (getYear date) (getMonth date)
                             (getDay date) (getHour date) (getMinute date)
+
+readFiles :: [FilePath] -> IO L.ByteString
+readFiles = fmap L.concat . mapM L.readFile
+
 
