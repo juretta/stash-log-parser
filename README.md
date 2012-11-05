@@ -11,16 +11,12 @@ Download the pre-built binaries for your platform from:
 
 [https://bitbucket.org/ssaasen/stash-log-parser/downloads](https://bitbucket.org/ssaasen/stash-log-parser/downloads)
 
-The `logparser` binary supports multiple commands and currently expects
-a single logfile as an argument.
+The `logparser` binary supports multiple commands and accepts one or more
+logfiles as arguments (either in uncompressed or compressed (bzip2) form).
 
 E.g.
 
-    $> logparser gitOperations FILEPATH
-
-Note: To combine multiple log files into a single file use:
-
-    $> cat atlassian-stash-access-2012-0*.log > aggregated-log-file
+    $> logparser gitOperations ./path/to/atlassian-stash-access-2012-09-12*.log
 
 Executing `logparser` will show the help with a list of supported commands.
 
@@ -31,7 +27,7 @@ E.g. for the `gitOperations` command that shows the number of git operations
 per hour, the output will look like this:
 
 
-    [922] λ > logparser gitOperations aggregated.log 
+    [922] λ > logparser gitOperations atlassian-stash-access-2012-*.log.bz2
     2012-08-22 18|2|0|13|0|733|0|0|0|0|0|2|0|13|0|733
     2012-08-22 19|3|24|74|0|1660|0|0|0|0|0|3|24|74|0|1660
     2012-08-22 20|2|33|119|0|1369|0|0|0|0|0|2|33|119|0|1369

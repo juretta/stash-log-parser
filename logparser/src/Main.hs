@@ -1,10 +1,13 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Main where
 
 import qualified Data.ByteString.Lazy.Char8 as L
+import qualified Codec.Compression.BZip as BZip
 import Stash.Log.Parser
 import Stash.Log.Analyser
 import Stash.Log.GitOpsAnalyser
 import Data.Default
+import Data.List (isSuffixOf)
 import UI.Command
 import Prelude hiding (takeWhile)
 import Text.Printf (printf)
@@ -105,14 +108,19 @@ parseAndPrint f path = print . f . L.lines =<< readFiles path
 printCountLines :: (Show a) => (L.ByteString -> a) -> [FilePath] -> IO ()
 printCountLines f path = print . f =<< readFiles path
 
-toLines :: [FilePath] -> IO [L.ByteString]
-toLines = liftM L.lines . readFiles
-
 formatLogDate :: LogDate -> String
 formatLogDate date = printf "%04d-%02d-%02d %02d:%02d" (getYear date) (getMonth date)
                             (getDay date) (getHour date) (getMinute date)
 
+-- =================================================================================
+
+toLines :: [FilePath] -> IO [L.ByteString]
+toLines = liftM L.lines . readFiles
+
 readFiles :: [FilePath] -> IO L.ByteString
-readFiles = fmap L.concat . mapM L.readFile
+readFiles = fmap L.concat . mapM readCompressedOrUncompressed
 
-
+readCompressedOrUncompressed :: FilePath -> IO L.ByteString
+readCompressedOrUncompressed path = if ".bz2" `isSuffixOf` path
+                                    then liftM BZip.decompress $ L.readFile path
+                                    else L.readFile path
