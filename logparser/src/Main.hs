@@ -89,17 +89,20 @@ main = appMain logparser
 generateProtocolData :: (Input -> [ProtocolStats]) -> [FilePath] -> IO ()
 generateProtocolData f path = do
         plotData <- liftM f $ toLines path
+        printf "# Date | SSH | HTTP(s)\n"
         mapM_ (\(ProtocolStats date ssh http) -> printf "%s|%d|%d\n" date ssh http) plotData
 
 generatePlotDataGitOps :: (Input -> [GitOperationStats]) -> [FilePath] -> IO ()
 generatePlotDataGitOps f path = do
         plotData <- liftM f $ toLines path
-        mapM_ (\(GitOperationStats date [a,b,c,d,e] [aHit,bHit,cHit,dHit,eHit]) -- clone, fetch, shallow clone, push, ref advertisement
+        printf "# Date | clone | fetch | shallow clone | push | ref advertisement | clone (hit) | fetch (hit) | shallow clone (hit) | push (hit) | ref advertisement (hit) | clone (miss) | fetch (miss) | shallow clone (miss) | push (miss) | ref advertisement (miss)\n"
+        mapM_ (\(GitOperationStats date [a,b,c,d,e] [aHit,bHit,cHit,dHit,eHit])
                 -> printf "%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d\n" date (a+aHit) (b+bHit) (c+cHit) (d+dHit) (e+eHit) aHit bHit cHit dHit eHit a b c d e) plotData
 
 generatePlotDataConcurrentConn :: (Input -> [DateValuePair]) -> [FilePath] -> IO ()
 generatePlotDataConcurrentConn f path = do
         plotData <- liftM f $ toLines path
+        printf "# Date | Max conncurrent connection\n"
         mapM_ (\pd -> printf "%s|%d\n" (formatLogDate $ getLogDate pd) (getValue pd)) plotData
 
 parseAndPrint :: (Show a) => (Input -> a) -> [FilePath] -> IO ()
