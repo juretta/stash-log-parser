@@ -13,7 +13,6 @@ LOG_FILE=${1:-"../access-logs/aggregated-log-file"}
 
 time logparser gitOperations ${LOG_FILE} +RTS -sstderr > plot-git-ops
 gnuplot < gnuplot/generate-git-ops-plot.plot
-gnuplot < gnuplot/generate-git-ref-advertisement-plot.plot
 
 time logparser maxConn ${LOG_FILE} +RTS -sstderr  > plot-all
 gnuplot < gnuplot/generate-max-conn-plot.plot
