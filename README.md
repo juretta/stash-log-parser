@@ -37,9 +37,13 @@ The fields are `|` separated. The first column usually contains a date field
 (using a 60 minute granularity). The format of the remaining columns depends on
 the command that is being used.
 
+The first line of the output is a column name header prepended by a '#'.
 
 The output can be used to generate graphs, either using the provided `gnuplot`
 scripts or by using the Confluence chart macro.
 
 The `regenerate-graphs.sh` shows how to run the logparser, pipe the output into
-data files and generate gnuplot graphics using the PNG format.
+data files and generate gnuplot graphics as PNG images.
+
+
+    $> ./regenerate-graphs.sh '/data/stash-access-log/atlassian-stash-access-2012-09*.log*'
