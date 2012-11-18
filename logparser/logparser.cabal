@@ -38,11 +38,8 @@ executable logparser
     other-modules:          Stash.Log.Analyser, Stash.Log.Parser, Stash.Log.GitOpsAnalyser, Stash.Log.Common
     build-depends:          base < 5 && >= 3,
                             bytestring >= 0.9,
-                            old-locale,
-                            old-time,
                             MissingH,
                             attoparsec >= 0.10,
-                            containers,
                             ui-command,
                             data-default,
                             mtl >= 2.0.0.0 && < 3,
