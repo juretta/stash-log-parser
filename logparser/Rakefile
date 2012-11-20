@@ -86,6 +86,7 @@ end
 
 def cabal(cmd)
   print `cabal #{cmd}`
+  raise "Failed to execute 'cabal #{cmd}'" unless $?.to_i.eql?(0)
 end
 
 def with_temp_dir(name)
