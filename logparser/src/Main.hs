@@ -109,7 +109,7 @@ generatePlotDataGitOps f path = do
 generatePlotDataConcurrentConn :: (Input -> [DateValuePair]) -> [FilePath] -> IO ()
 generatePlotDataConcurrentConn f path = do
         plotData <- liftM f $ toLines path
-        printf "# Date | Max conncurrent connection\n"
+        printf "# Date | Max concurrent connection\n"
         mapM_ (\pd -> printf "%s|%d\n" (formatLogDate $ getLogDate pd) (getValue pd)) plotData
 
 generateCloneRequestDurations :: (Input -> [RequestDurationStat]) -> [FilePath] -> IO ()
