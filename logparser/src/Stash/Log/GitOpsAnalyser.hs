@@ -26,8 +26,8 @@ data GitOperationStats = GitOperationStats {
 data RequestDurationStat = RequestDurationStat {
     getDurationDate             :: !LogDate
    ,getClientIp                 :: !String
-   ,getDurationHit              :: !Int
-   ,getDurationMiss             :: !Int
+   ,cacheMissDurations          :: ![Int]
+   ,cacheHitDurations           :: ![Int] -- clone, fetch, shallow clone, push, ref advertisement
 }
 
 -- | Parse and aggregate the log file input into a list of hourly GitOperationStats
@@ -39,26 +39,31 @@ analyseGitOperations rawLines =
 
 -- | Return the duration of clone (clone and shallow clone) operations
 cloneRequestDuration :: Input -> [RequestDurationStat]
-cloneRequestDuration rawLines = collectRequestDurations rawLines authenticatedClone
+cloneRequestDuration rawLines = collectRequestDurations rawLines authenticatedGitOp
 
 
 -- =================================================================================
 
-authenticatedClone :: LogLine -> Bool
-authenticatedClone line = isJust (getUsername line) && (isShallowClone line || isClone line)
-
-emptyStats :: GitOperationStats
-emptyStats = GitOperationStats "" zero zero
-            where zero = replicate 5 0
+authenticatedGitOp :: LogLine -> Bool
+authenticatedGitOp line = isJust (getUsername line)
 
 collectRequestDurations :: Input -> (LogLine -> Bool) -> [RequestDurationStat]
 collectRequestDurations rawLines p = map m $ filter f $ parseLogLines rawLines
         where clientIp line = head $ split "," (S.unpack $ getRemoteAdress line)
-              m line        = if isCacheHit line
-                              then RequestDurationStat (getDate line) (clientIp line) (getRequestDuration line) 0
-                              else RequestDurationStat (getDate line) (clientIp line) 0 (getRequestDuration line)
-              f line        = isOutgoingLogLine line && p line
+              ops           = [isClone, isFetch, isShallowClone, isPush, isRefAdvertisement]
+              f line        = isOutgoingLogLine line && p line && (or $ map (\g -> g line) ops)
+              m line        =  let  duration    = getRequestDuration line
+                                    zero        = replicate 5 0
+                                    inc op      = if op line then (+duration) else id
+                                    missOps     = map (inc . uncachedOperation) ops
+                                    hitOps      = map (inc . cachedOperation) ops
+                                    !misses     = zipWith id missOps zero
+                                    !hits       = zipWith id hitOps zero
+                               in RequestDurationStat (getDate line) (clientIp line) misses hits
 
+emptyStats :: GitOperationStats
+emptyStats = GitOperationStats "" zero zero
+            where zero = replicate 5 0
 
 analyseGitOperations' :: (LogDate -> LogDate -> Bool) -> (LogDate -> String) -> Input -> [GitOperationStats]
 analyseGitOperations' comp formatLogDate rawLines =
