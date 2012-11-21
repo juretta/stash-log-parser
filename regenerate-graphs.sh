@@ -12,6 +12,7 @@ rm -f *.png
 LOG_FILE=${1:-"../access-logs/aggregated-log-file"}
 
 time logparser gitOperations ${LOG_FILE} +RTS -sstderr > plot-git-ops
+time logparser requestDurations ${LOG_FILE} +RTS -sstderr > clone-duration
 gnuplot < gnuplot/generate-git-ops-plot.plot
 
 time logparser maxConn ${LOG_FILE} +RTS -sstderr  > plot-all

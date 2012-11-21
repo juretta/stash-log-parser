@@ -58,3 +58,15 @@ set output "git-ops-ref-advertisement.png"
 plot    "plot-git-ops" using 1:6  with lines title "ref advertisement", \
         "plot-git-ops" using 1:11 with lines title "ref advertisement (hit)", \
         "plot-git-ops" using 1:16 with lines title "ref advertisement (miss)"
+
+
+# ===================================================================================
+set format x "%d/%m\n%H:%M"
+set timefmt "%Y-%m-%d %H:%M:%S"
+set output "git-clone-duration.png"
+set title "Duration of clone and shallow clone operations (seconds)"
+
+# Date | Duration (cache hit) | Duration (cache miss) | Client IP | hostname | Provider
+plot    "clone-duration"        using 1:($2/1000)                      with lines title "Clone (cache hit)",\
+        "clone-duration"        using 1:($3/1000)                      with lines title "Clone (cache miss)"
+

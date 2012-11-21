@@ -3,9 +3,12 @@
 module Stash.Log.GitOpsAnalyser
 ( GitOperationStats(..)
 , analyseGitOperations
+, RequestDurationStat(..)
+, cloneRequestDuration
 ) where
 
 import qualified Data.ByteString.Char8 as S
+import Data.String.Utils (split)
 import Data.List (foldl', groupBy)
 import Data.Maybe (isJust)
 import Data.Function (on)
@@ -19,6 +22,13 @@ data GitOperationStats = GitOperationStats {
     ,cacheHits                  :: [Int]
 }
 
+data RequestDurationStat = RequestDurationStat {
+    getDurationDate             :: !LogDate
+   ,getClientIp                 :: !String
+   ,getDurationHit              :: !Int
+   ,getDurationMiss             :: !Int
+}
+
 -- | Parse and aggregate the log file input into a list of hourly GitOperationStats
 analyseGitOperations :: Input -> [GitOperationStats]
 analyseGitOperations rawLines =
@@ -26,11 +36,28 @@ analyseGitOperations rawLines =
                             (getDay date) (getHour date)
     in analyseGitOperations' logDateEqHour formatLogDate rawLines
 
+-- | Return the duration of clone (clone and shallow clone) operations
+cloneRequestDuration :: Input -> [RequestDurationStat]
+cloneRequestDuration rawLines = collectRequestDurations rawLines authenticatedClone
+
+
 -- =================================================================================
+
+authenticatedClone :: LogLine -> Bool
+authenticatedClone line = isJust (getUsername line) && (isShallowClone line || isClone line)
 
 emptyStats :: GitOperationStats
 emptyStats = GitOperationStats "" zero zero
-        where zero = replicate 5 0
+            where zero = replicate 5 0
+
+collectRequestDurations :: Input -> (LogLine -> Bool) -> [RequestDurationStat]
+collectRequestDurations rawLines p = map m $ filter f $ parseLogLines rawLines
+        where clientIp line = head $ split "," (S.unpack $ getRemoteAdress line)
+              m line        = if isCacheHit line
+                              then RequestDurationStat (getDate line) (clientIp line) (getRequestDuration line) 0
+                              else RequestDurationStat (getDate line) (clientIp line) 0 (getRequestDuration line)
+              f line        = isOutgoingLogLine line && p line
+
 
 analyseGitOperations' :: (LogDate -> LogDate -> Bool) -> (LogDate -> String) -> Input -> [GitOperationStats]
 analyseGitOperations' comp formatLogDate rawLines =

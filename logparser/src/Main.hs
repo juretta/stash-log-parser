@@ -25,11 +25,11 @@ logparser = def {
                 appCategories = ["Logfile analysis", "Debug"],
                 appShortDesc = "Logparser for the Atlassian Stash access logs",
                 appLongDesc = "Parses and aggregates the access logs of Atlassian Stash",
-                appCmds = [count, countRequests, maxConn, summarizeGitOperations, summarizeProtocolStats, debugParser ]
+                appCmds = [count, countRequests, maxConn, summarizeGitOperations, requestDurations, summarizeProtocolStats, debugParser ]
         }
 
 
-count, countRequests, maxConn, summarizeGitOperations, summarizeProtocolStats, debugParser :: Command ()
+count, countRequests, maxConn, summarizeGitOperations, requestDurations, summarizeProtocolStats, debugParser :: Command ()
 count = defCmd {
                 cmdName = "count",
                 cmdHandler = commandHandler $ printCountLines countLines,
@@ -56,6 +56,13 @@ summarizeGitOperations = defCmd {
                 cmdHandler = commandHandler $ generatePlotDataGitOps analyseGitOperations,
                 cmdCategory = "Logfile analysis",
                 cmdShortDesc = "Aggregate git operations per hour. Show counts for fetch, clone, push, pull and ref advertisement"
+        }
+
+requestDurations = defCmd {
+                cmdName = "requestDurations",
+                cmdHandler = commandHandler $ generateCloneRequestDurations cloneRequestDuration,
+                cmdCategory = "Logfile analysis",
+                cmdShortDesc = "Show the duration of clone operations over time"
         }
 
 summarizeProtocolStats = defCmd {
@@ -104,6 +111,12 @@ generatePlotDataConcurrentConn f path = do
         plotData <- liftM f $ toLines path
         printf "# Date | Max conncurrent connection\n"
         mapM_ (\pd -> printf "%s|%d\n" (formatLogDate $ getLogDate pd) (getValue pd)) plotData
+
+generateCloneRequestDurations :: (Input -> [RequestDurationStat]) -> [FilePath] -> IO ()
+generateCloneRequestDurations f path = do
+        plotData <- liftM f $ toLines path
+        printf "# Date | Duration (cache hit) | Duration (cache miss) | Client IP\n"
+        mapM_ (\pd -> printf "%s|%d|%d|%s\n" (show $ getDurationDate pd) (getDurationHit pd) (getDurationMiss pd) (getClientIp pd)) plotData
 
 parseAndPrint :: (Show a) => (Input -> a) -> [FilePath] -> IO ()
 parseAndPrint f path = print . f . L.lines =<< readFiles path

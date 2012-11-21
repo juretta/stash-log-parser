@@ -23,6 +23,7 @@ import Prelude hiding (takeWhile)
 import Data.ByteString.Char8 (readInteger)
 import Data.String.Utils (split)
 import Data.Maybe (mapMaybe)
+import Text.Printf (printf)
 -- REMOTE_ADRESS | PROTOCOL | (o|i)REQUEST_ID | USERNAME | date |  URL | DETAILS | LABELS | TIME | SESSION_ID |
 -- REQUEST_ID -> MINUTE_OF_DAYxREQUEST_COUNTERxCONCURRENT_REQUESTS
 
@@ -50,7 +51,7 @@ data LogLine = LogLine {
     ,getAction              :: Action
     ,getDetails             :: S.ByteString
     ,getLabels              :: [String]
-    ,getRequestDuration     :: S.ByteString
+    ,getRequestDuration     :: Int
     ,getSessionId           :: S.ByteString
 } deriving (Show, Eq)
 
@@ -62,7 +63,15 @@ data LogDate = LogDate {
     ,getMinute      :: !Int
     ,getSeconds     :: !Int
     ,getMillis      :: !Int
-} deriving (Show, Eq)
+} deriving (Eq)
+
+instance Show LogDate where
+    show date = printf "%04d-%02d-%02d %02d:%02d:%02d" (getYear date)
+                                (getMonth date)
+                                (getDay date)
+                                (getHour date)
+                                (getMinute date)
+                                (getSeconds date)
 
 -- | Parse the input into a list of LogLines
 parseLogLines :: Input -> [LogLine]
@@ -183,10 +192,11 @@ parseLine = do
     action <- parseAction
     details <- logEntry
     labels_ <- logEntry
-    duration <- logEntry
+    rawDuration <- logEntry
     sessionId <- logEntry
     let labels = map trim $ split "," (S.unpack labels_)
         username = if rawUsername == "-" then Nothing else Just rawUsername
+        duration = read $ S.unpack rawDuration
     return $ LogLine remoteAddress protocol requestId username date
                     action details labels duration sessionId
 
