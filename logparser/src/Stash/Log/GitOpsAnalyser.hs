@@ -5,6 +5,7 @@ module Stash.Log.GitOpsAnalyser
 , analyseGitOperations
 , RequestDurationStat(..)
 , cloneRequestDuration
+, isRefAdvertisement
 ) where
 
 import qualified Data.ByteString.Char8 as S

@@ -9,6 +9,7 @@ import qualified Data.ByteString.Lazy.Char8 as L
 import qualified Test.HUnit as H
 import Stash.Log.Analyser
 import Stash.Log.Parser
+import Stash.Log.GitOpsAnalyser
 import Data.Maybe
 import Test.QuickCheck hiding ((.&.))
 import Test.Framework (Test, defaultMain, testGroup)
@@ -67,6 +68,10 @@ test_logLineParseActionSsh = H.assertEqual
     "Should parse the action correctly for ssh"
     "/CONF/teamcal.git"
     (getPath $ getAction $ fromJust parsedLogLine3)
+
+test_classifyRefAdv = H.assertBool
+    "Should identify ref advertisement"
+    (isRefAdvertisement $ fromJust parsedLogLine)
 
 test_logLineParseDetails = H.assertEqual
     "Should parse the labels correctly"
@@ -169,6 +174,7 @@ tests =
       testGroup "parser"
       [ testCase "parser/parse empty String" test_logLineParserEmpty
         ,testCase "parser/parse single line" test_logLineParseSingleLine
+        ,testCase "parser/parse classify log line" test_classifyRefAdv
         ,testCase "parser/parse protocol (https)" test_logLineParseProtocol
         ,testCase "parser/parse protocol (ssh)" test_logLineParseProtocolSsh
         ,testCase "parser/parse request id" test_logLineParseRequestId
