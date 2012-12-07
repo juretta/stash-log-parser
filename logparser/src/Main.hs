@@ -22,7 +22,7 @@ import System.Path.NameManip
 logparser :: Application () ()
 logparser = def {
                 appName = "logparser",
-                appVersion = "1.7",
+                appVersion = "1.8",
                 appAuthors = ["Stefan Saasen"],
                 appBugEmail = "ssaasen@atlassian.com",
                 appCategories = ["Logfile analysis", "Debug"],
