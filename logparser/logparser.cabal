@@ -52,3 +52,6 @@ executable logparser
                             -rtsopts
                             -O2
                             -- -prof -auto-all -caf-all -fforce-recomp
+    if os(linux)
+        ghc-options:
+                            -static -optc-static -optl-static -optl-pthread
