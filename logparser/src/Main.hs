@@ -6,16 +6,14 @@ import qualified Codec.Compression.BZip as BZip
 import Stash.Log.Parser
 import Stash.Log.Analyser
 import Stash.Log.GitOpsAnalyser
+import Stash.Log.Common (sortLogFiles)
 import Data.Default
-import Data.List (isSuffixOf,sortBy)
-import Data.Monoid (mappend)
-import Data.String.Utils (split)
+import Data.List (isSuffixOf)
 import UI.Command
 import Prelude hiding (takeWhile)
 import Text.Printf (printf)
 import Control.Monad (liftM)
 import Control.Monad.Trans (liftIO)
-import System.Path.NameManip
 
 -- =================================================================================
 
@@ -145,16 +143,3 @@ readCompressedOrUncompressed path = if ".bz2" `isSuffixOf` path
                                     then liftM BZip.decompress $ L.readFile path
                                     else L.readFile path
 
--- | Sort the logfiles by date and log file sequence number
--- The logfile naming scheme is: "atlassian-stash-access-2012-11-29.0.log(.bz2)"
-sortLogFiles :: [FilePath] -> [FilePath]
-sortLogFiles = sortBy logFilePred
-    where extractFile = last . slice_path
-          sortPred (date1, num1) (date2, num2) = compare date1 date2 `mappend` compare num1 num2
-          logFilePred logFileName1 logFileName2 = sortPred (extractSortPairs logFileName1) (extractSortPairs logFileName2)
-          extractSortPairs path = let elems = drop 3 $ split "-" $ extractFile path
-                                  in case elems of
-                                     (year:month:(rest:_)) -> case split "." rest of
-                                                             (day:num:_) -> (year ++ "-" ++ month ++ "-" ++ day, read num :: Int)
-                                                             _           -> ("", 0)
-                                     _                 -> ("", 0)

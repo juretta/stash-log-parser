@@ -1,8 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 
--- | Tests for the 'Data.Hashable' module.  We test functions by
--- comparing the C and Haskell implementations.
-
 module Main (main) where
 
 import qualified Data.ByteString.Lazy.Char8 as L
@@ -10,6 +7,7 @@ import qualified Test.HUnit as H
 import Stash.Log.Analyser
 import Stash.Log.Parser
 import Stash.Log.GitOpsAnalyser
+import Stash.Log.Common (sortLogFiles)
 import Data.Maybe
 import Test.QuickCheck hiding ((.&.))
 import Test.Framework (Test, defaultMain, testGroup)
@@ -157,6 +155,21 @@ test_protocolCount = H.assertEqual
     (protocolCount dataLogLines)
 
 ------------------------------------------------------------------------
+test_sortFilesAsc = H.assertEqual
+    "Should sort the given files correctly"
+    ["atlassian-stash-access-2012-11-29.1.log.bz2",
+     "atlassian-stash-access-2012-11-29.2.log.bz2",
+     "atlassian-stash-access-2012-11-29.4.log.bz2",
+     "atlassian-stash-access-2012-11-29.10.log.bz2",
+     "atlassian-stash-access.log"]
+     (sortLogFiles input)
+    where input = ["atlassian-stash-access-2012-11-29.4.log.bz2",
+                     "atlassian-stash-access-2012-11-29.1.log.bz2",
+                     "atlassian-stash-access-2012-11-29.10.log.bz2",
+                     "atlassian-stash-access.log",
+                     "atlassian-stash-access-2012-11-29.2.log.bz2"]
+
+------------------------------------------------------------------------
 -- Test harness
 
 main :: IO ()
@@ -170,6 +183,10 @@ tests =
         ,testCase "analyser/protocolCount" test_protocolCount
         ,testCase "analyser/dataConcurrentConn logDateEqMin" test_plotDataConcurrentConn
         ,testCase "analyser/dataConcurrentConn logDateEqHour" test_plotDataConcurrentConnHour
+      ],
+      testGroup "Common"
+      [
+        testCase "common/sortLogFiles" test_sortFilesAsc
       ],
       testGroup "parser"
       [ testCase "parser/parse empty String" test_logLineParserEmpty
