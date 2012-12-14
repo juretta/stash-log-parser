@@ -7,18 +7,14 @@ module Stash.Log.Analyser
 , ProtocolStats(..)
 , DateValuePair(..)
 , maxConcurrent
-, protocolCount
 , plotDataConcurrentConnMinute
 , plotDataConcurrentConnHour
 , protocolStatsByHour
 , showLines
 ) where
 
-import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Lazy.Char8 as L
-import qualified Data.HashMap.Strict as M
 import Data.List (foldl', groupBy)
-import Data.Maybe (mapMaybe)
 import Data.Function (on)
 import Text.Printf (printf)
 import Stash.Log.Parser
@@ -48,12 +44,6 @@ countRequestLines = countLinesWith (\x acc -> let rid = getRequestId x
 maxConcurrent:: Input -> Integer
 maxConcurrent = countLinesWith (\x acc -> let conn = getConcurrentRequests $ getRequestId x
                                           in if conn >= acc then conn else acc)
-
-protocolCount :: Input -> [(S.ByteString,Integer)]
-protocolCount = M.toList . foldl' count' M.empty . mapMaybe parseLogLine
-        where
-            count' acc logLine = let !proto = getProtocol logLine
-                                 in M.insertWith (+) proto 1 acc
 
 isSsh :: LogLine -> Bool
 isSsh logLine = getProtocol logLine == "ssh"

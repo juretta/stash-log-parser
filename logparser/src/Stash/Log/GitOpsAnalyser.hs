@@ -6,12 +6,14 @@ module Stash.Log.GitOpsAnalyser
 , RequestDurationStat(..)
 , cloneRequestDuration
 , isRefAdvertisement
+, protocolCount
 ) where
 
 import qualified Data.ByteString.Char8 as S
+import qualified Data.HashMap.Strict as M
 import Data.String.Utils (split)
 import Data.List (foldl', groupBy)
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, mapMaybe)
 import Data.Function (on)
 import Text.Printf (printf)
 import Stash.Log.Parser
@@ -51,7 +53,7 @@ collectRequestDurations :: Input -> (LogLine -> Bool) -> [RequestDurationStat]
 collectRequestDurations rawLines p = map m $ filter f $ parseLogLines rawLines
         where clientIp line = head $ split "," (S.unpack $ getRemoteAdress line)
               ops           = [isClone, isFetch, isShallowClone, isPush, isRefAdvertisement]
-              f line        = isOutgoingLogLine line && p line && (or $ map (\g -> g line) ops)
+              f line        = isOutgoingLogLine line && p line && isGitOperation line
               m line        =  let  duration    = getRequestDuration line
                                     zero        = replicate 5 0
                                     inc op      = if op line then (+duration) else id
@@ -83,9 +85,20 @@ summarizeGitOperations formatLogDate = foldl' aggregate emptyStats . filter isOu
                                     !hits'      = zipWith id hitOps hits
                                 in GitOperationStats date' misses' hits'
 
+protocolCount :: Input -> [(S.ByteString,Integer)]
+protocolCount line = M.toList $ foldl' count' M.empty (filter isOutgoingLogLine (filter isGitOperation $ mapMaybe parseLogLine line))
+        where
+            count' acc logLine = let !proto = getProtocol logLine
+                                 in M.insertWith (+) proto 1 acc
+
+
 -- =================================================================================
 --                                Predicates
 -- =================================================================================
+
+isGitOperation :: LogLine -> Bool
+isGitOperation line = (or $ map (\g -> g line) ops)
+            where ops = [isClone, isFetch, isShallowClone, isPush, isRefAdvertisement]
 
 -- As of 1.1.2 of the clone cache plugin, refs are explicitly listed in the
 -- labels field, most of the data we have does _not_ have that information though

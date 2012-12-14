@@ -151,7 +151,7 @@ test_maxConcurrent = H.assertEqual
 
 test_protocolCount = H.assertEqual
     "Should count the protocol correctly"
-    [("https", 6), ("ssh", 2)]
+    [("https", 3), ("ssh", 1)]
     (protocolCount dataLogLines)
 
 ------------------------------------------------------------------------
