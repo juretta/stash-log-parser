@@ -20,9 +20,9 @@ import Stash.Log.Parser
 import Stash.Log.Common (logDateEqHour, isSsh, isHttp)
 
 data GitOperationStats = GitOperationStats {
-     getOpStatDate              :: String
-    ,cacheMisses                :: [Int] -- clone, fetch, shallow clone, push, ref advertisement
-    ,cacheHits                  :: [Int]
+     getOpStatDate              :: !String
+    ,cacheMisses                :: ![Int] -- clone, fetch, shallow clone, push, ref advertisement
+    ,cacheHits                  :: ![Int]
 }
 
 data RequestDurationStat = RequestDurationStat {
@@ -80,9 +80,9 @@ summarizeGitOperations formatLogDate = foldl' aggregate emptyStats . filter isOu
                                     inc op      = if op logLine then (+1) else (+0)
                                     missOps     = map (inc . uncachedOperation) ops
                                     hitOps      = map (inc . cachedOperation) ops
-                                    !date'      = if null date then formatLogDate $ getDate logLine else date
-                                    !misses'    = zipWith id missOps misses
-                                    !hits'      = zipWith id hitOps hits
+                                    date'       = if null date then formatLogDate $ getDate logLine else date
+                                    misses'     = zipWith id missOps misses
+                                    hits'       = zipWith id hitOps hits
                                 in GitOperationStats date' misses' hits'
 
 protocolCount :: Input -> [(S.ByteString,Integer)]
