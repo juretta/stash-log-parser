@@ -13,7 +13,7 @@ import qualified Data.ByteString.Char8 as S
 import qualified Data.HashMap.Strict as M
 import Data.String.Utils (split)
 import Data.List (foldl', groupBy)
-import Data.Maybe (isJust, mapMaybe)
+import Data.Maybe (isJust, mapMaybe, fromMaybe)
 import Data.Function (on)
 import Text.Printf (printf)
 import Stash.Log.Parser
@@ -30,6 +30,7 @@ data RequestDurationStat = RequestDurationStat {
    ,getClientIp                 :: !String
    ,cacheMissDurations          :: ![Int]
    ,cacheHitDurations           :: ![Int] -- clone, fetch, shallow clone, push, ref advertisement
+   ,requestUsername             :: !S.ByteString
 }
 
 -- | Parse and aggregate the log file input into a list of hourly GitOperationStats
@@ -59,9 +60,10 @@ collectRequestDurations rawLines p = map m $ filter f $ parseLogLines rawLines
                                     inc op      = if op line then (+duration) else id
                                     missOps     = map (inc . uncachedOperation) ops
                                     hitOps      = map (inc . cachedOperation) ops
+                                    username'   = fromMaybe "-" $ getUsername line
                                     !misses     = zipWith id missOps zero
                                     !hits       = zipWith id hitOps zero
-                               in RequestDurationStat (getDate line) (clientIp line) misses hits
+                               in RequestDurationStat (getDate line) (clientIp line) misses hits username'
 
 emptyStats :: GitOperationStats
 emptyStats = GitOperationStats "" zero zero

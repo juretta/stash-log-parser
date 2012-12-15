@@ -2,6 +2,7 @@
 module Main where
 
 import qualified Data.ByteString.Lazy.Char8 as L
+import qualified Data.ByteString.Char8 as S
 import qualified Codec.Compression.BZip as BZip
 import Stash.Log.Parser
 import Stash.Log.Analyser
@@ -116,9 +117,9 @@ generatePlotDataConcurrentConn f path = do
 generateCloneRequestDurations :: (Input -> [RequestDurationStat]) -> [FilePath] -> IO ()
 generateCloneRequestDurations g path = do
         plotData <- liftM g $ toLines path
-        printf "# Date | Clone duration (cache hit) | Clone duration (cache miss) | Fetch (hit) | Fetch (miss) | Shallow Clone (hit) | Shallow Clone (miss) | Push (hit) | Push (miss) | Ref adv (hit) | Ref adv (miss) | Client IP\n"
-        mapM_ (\(RequestDurationStat date clientIp [cm,fm,sm,pm,rm] [c,f,s,p,r])
-                -> printf "%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%s\n" (show date) c cm f fm s sm p pm r rm clientIp) plotData
+        printf "# Date | Clone duration (cache hit) | Clone duration (cache miss) | Fetch (hit) | Fetch (miss) | Shallow Clone (hit) | Shallow Clone (miss) | Push (hit) | Push (miss) | Ref adv (hit) | Ref adv (miss) | Client IP | Username \n"
+        mapM_ (\(RequestDurationStat date clientIp [cm,fm,sm,pm,rm] [c,f,s,p,r] username)
+                -> printf "%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%s|%s\n" (show date) c cm f fm s sm p pm r rm clientIp (S.unpack username)) plotData
 
 parseAndPrint :: (Show a) => (Input -> a) -> [FilePath] -> IO ()
 parseAndPrint f path = print . f . L.lines =<< readFiles path
