@@ -13,9 +13,9 @@ set key left top reverse Left
 set format x "%d/%m\n%H:%M"
 set timefmt "%Y-%m-%d %H:%M:%S"
 
-set output "git-clone-duration.png"
-
+#
 # ===================================================================================
+set output "git-clone-duration.png"
 set title "Duration of git operations"
 set multiplot layout 3, 1 title
 
@@ -40,4 +40,9 @@ plot    "clone-duration"        using 1:($8/1000)                      with line
         "clone-duration"        using 1:($9/1000)                      with lines title "Push (cache miss)"
 
 
+unset multiplot
+set output "git-clone-duration-distribution.png"
 
+set title "Distribution of git clone operations"
+plot    "clone-duration"        using 1:(($2+$3)/1000)                      with points pointtype 6 title "Clone",\
+        "clone-duration"        using 1:(($6+$7)/1000)                      with points pointtype 6 title "Shallow Clone"
