@@ -17,7 +17,7 @@ import Data.Maybe (isJust, mapMaybe)
 import Data.Function (on)
 import Text.Printf (printf)
 import Stash.Log.Parser
-import Stash.Log.Common (logDateEqHour)
+import Stash.Log.Common (logDateEqHour, isSsh, isHttp)
 
 data GitOperationStats = GitOperationStats {
      getOpStatDate              :: String
@@ -97,18 +97,21 @@ protocolCount line = M.toList $ foldl' count' M.empty (filter isOutgoingLogLine 
 -- =================================================================================
 
 isGitOperation :: LogLine -> Bool
-isGitOperation line = (or $ map (\g -> g line) ops)
+isGitOperation line = any (\g -> g line) ops
             where ops = [isClone, isFetch, isShallowClone, isPush, isRefAdvertisement]
 
 -- As of 1.1.2 of the clone cache plugin, refs are explicitly listed in the
 -- labels field, most of the data we have does _not_ have that information though
 isRefAdvertisement :: LogLine -> Bool
-isRefAdvertisement logLine = ".git/info/refs" `S.isSuffixOf` path && "GET" == method && isJust username
+isRefAdvertisement logLine = authenticatedGitOp logLine && isOutgoingLogLine logLine && refAdvertisement logLine
             where
                 action      = getAction logLine
                 path        = getPath action
                 method      = getMethod action
-                username    = getUsername logLine
+                refAdvertisement line
+                            | isSsh line        = isRefs line || not (any (inLabel line) ["clone", "fetch", "shallow clone"])
+                            | isHttp line       = ".git/info/refs" `S.isSuffixOf` path && "GET" == method
+                            | otherwise         = False
 
 isCacheHit :: LogLine -> Bool
 isCacheHit logLine = inLabel logLine "cache:hit"
@@ -127,6 +130,9 @@ isShallowClone logLine = inLabel logLine "shallow clone"
 
 isPush :: LogLine -> Bool
 isPush logLine = inLabel logLine "push"
+
+isRefs :: LogLine -> Bool
+isRefs logLine = inLabel logLine "refs"
 
 inLabel :: LogLine -> String -> Bool
 inLabel logLine name =  let labels = getLabels logLine

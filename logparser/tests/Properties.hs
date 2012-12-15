@@ -30,7 +30,7 @@ test_logLineParserEmpty = H.assertEqual
   ( parseLogLine "" )
 
 parsedLogLine = parseLogLine inputLine
-    where inputLine = "63.246.22.196,172.16.3.45 | https | i1112x6x32 | ssaasen | 2012-08-22 18:32:08,505 | \"GET /git/ATLASSIAN/jira.git/info/refs HTTP/1.1\" | \"\" \"git/1.7.4.1\" | shallow clone | - | - | "
+    where inputLine = "63.246.22.196,172.16.3.45 | https | o1112x6x32 | ssaasen | 2012-08-22 18:32:08,505 | \"GET /git/ATLASSIAN/jira.git/info/refs HTTP/1.1\" | \"\" \"git/1.7.4.1\" | shallow clone | - | - | "
 
 parsedLogLine2 = parseLogLine inputLine
     where inputLine = "63.246.22.196,172.16.3.45 | https | i1112x6x32 | - | 2012-08-22 18:32:08,505 | \"GET /git/ATLASSIAN/jira.git/info/refs HTTP/1.1\" | \"\" \"git/1.7.4.1\" | fetch | - | - | "
@@ -83,7 +83,7 @@ test_logLineParseLabels = H.assertEqual
 
 test_logLineParseRequestId = H.assertEqual
     "Should parse the request id"
-    'i'
+    'o'
     (getInOrOut $ getRequestId $ fromJust parsedLogLine)
 
 test_logLineParseRequestIdCounter = H.assertEqual
@@ -154,6 +154,36 @@ test_protocolCount = H.assertEqual
     [("https", 3), ("ssh", 1)]
     (protocolCount dataLogLines)
 
+test_identifyRefAdvertisement_SSH = H.assertEqual
+    "Should identify an SSH based ref advertisement correctly"
+    True
+    (isRefAdvertisement $ fromJust $ parseLogLine "172.16.1.187 | ssh | o912x7392530x2 | ssaasen | 2012-12-14 15:12:20,602 | git-upload-pack '/CONF/confluence.git' | - | - | 4284 | jfvu89 |  ")
+
+test_identifyRefAdvertisement_SSHClone = H.assertEqual
+    "Should not identify clone response as ref advertisement"
+    False
+    (isRefAdvertisement $ fromJust $ parseLogLine "172.16.1.187 | ssh | o912x7392530x2 | ssaasen | 2012-12-14 15:12:20,602 | git-upload-pack '/CONF/confluence.git' | - | clone | 4284 | jfvu89 |  ")
+
+test_identifyRefAdvertisement_SSHIncoming = H.assertEqual
+    "Should not identify incoming request as ref advertisement"
+    False
+    (isRefAdvertisement $ fromJust $ parseLogLine "172.16.1.187 | ssh | i912x7392530x2 | ssaasen | 2012-12-14 15:12:20,602 | git-upload-pack '/CONF/confluence.git' | - | - | 4284 | jfvu89 |  ")
+
+test_identifyRefAdvertisement_SSHAuthenticated = H.assertEqual
+    "Should not identify unauthenticated request as ref advertisement"
+    False
+    (isRefAdvertisement $ fromJust $ parseLogLine "172.16.1.187 | ssh | o912x7392530x2 | - | 2012-12-14 15:12:20,602 | git-upload-pack '/CONF/confluence.git' | - | - | 4284 | jfvu89 |  ")
+
+test_identifyRefAdvertisement_HttpAction = H.assertEqual
+    "Should identify an HTTP based ref advertisement correctly"
+    True
+    (isRefAdvertisement $ fromJust $ parseLogLine "63.246.22.222,172.16.3.45 | https | o2112x2x4 | ssaasen | 2012-08-23 17:44:20,123 | \"GET /git/ATLASSIAN/jira.git/info/refs HTTP/1.1\" | \"\" \"JGit/unknown\" | - | - | - | ")
+
+test_identifyRefAdvertisement_HttpLabel = H.assertEqual
+    "Should identify an HTTP based ref advertisement correctly"
+    True
+    (isRefAdvertisement $ fromJust $ parseLogLine "63.246.22.222,172.16.3.45 | https | o2112x2x4 | ssaasen | 2012-08-23 17:44:20,123 | \"GET /git/ATLASSIAN/jira.git/info/refs HTTP/1.1\" | \"\" \"JGit/unknown\" | refs | - | - | ")
+
 ------------------------------------------------------------------------
 test_sortFilesAsc = H.assertEqual
     "Should sort the given files correctly"
@@ -183,6 +213,12 @@ tests =
         ,testCase "analyser/protocolCount" test_protocolCount
         ,testCase "analyser/dataConcurrentConn logDateEqMin" test_plotDataConcurrentConn
         ,testCase "analyser/dataConcurrentConn logDateEqHour" test_plotDataConcurrentConnHour
+        ,testCase "analyser/isRefAdvertisement ssh" test_identifyRefAdvertisement_SSH
+        ,testCase "analyser/isRefAdvertisement ignore incoming ssh" test_identifyRefAdvertisement_SSHIncoming
+        ,testCase "analyser/isRefAdvertisement require authenticated ssh" test_identifyRefAdvertisement_SSHAuthenticated
+        ,testCase "analyser/isRefAdvertisement ignore clones ssh" test_identifyRefAdvertisement_SSHClone
+        ,testCase "analyser/isRefAdvertisement http action" test_identifyRefAdvertisement_HttpAction
+        ,testCase "analyser/isRefAdvertisement http label" test_identifyRefAdvertisement_HttpLabel
       ],
       testGroup "Common"
       [

@@ -18,7 +18,7 @@ import Data.List (foldl', groupBy)
 import Data.Function (on)
 import Text.Printf (printf)
 import Stash.Log.Parser
-import Stash.Log.Common (logDateEqHour, logDateEqMin)
+import Stash.Log.Common (logDateEqHour, logDateEqMin, isSsh, isHttp)
 
 data DateValuePair = DateValuePair {
      getLogDate     :: !LogDate
@@ -44,13 +44,6 @@ countRequestLines = countLinesWith (\x acc -> let rid = getRequestId x
 maxConcurrent:: Input -> Integer
 maxConcurrent = countLinesWith (\x acc -> let conn = getConcurrentRequests $ getRequestId x
                                           in if conn >= acc then conn else acc)
-
-isSsh :: LogLine -> Bool
-isSsh logLine = getProtocol logLine == "ssh"
-
-isHttp :: LogLine -> Bool
-isHttp logLine = proto == "http" || proto == "https"
-                where proto = getProtocol logLine
 
 -- The concurrent connection data needs to be aggregated.
 -- Example

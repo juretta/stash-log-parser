@@ -1,10 +1,14 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Stash.Log.Common
 ( logDateEqHour
 , logDateEqMin
 , sortLogFiles
+, isSsh
+, isHttp
 ) where
 
-import Stash.Log.Parser (LogDate(..))
+import Stash.Log.Parser
 import Data.List (sortBy)
 import Data.Monoid (mappend)
 import Data.String.Utils (split)
@@ -20,6 +24,14 @@ logDateEqHour a b = getYear a   == getYear b &&
 logDateEqMin :: LogDate -> LogDate -> Bool
 logDateEqMin a b = logDateEqHour a b &&
                 getMinute a == getMinute b
+
+isSsh :: LogLine -> Bool
+isSsh logLine = getProtocol logLine == "ssh"
+
+isHttp :: LogLine -> Bool
+isHttp logLine = proto == "http" || proto == "https"
+                where proto = getProtocol logLine
+
 
 -- | Sort the logfiles by date and log file sequence number
 -- The logfile naming scheme is: "atlassian-stash-access-2012-11-29.0.log(.bz2)"
