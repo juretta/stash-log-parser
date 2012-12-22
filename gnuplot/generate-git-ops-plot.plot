@@ -47,10 +47,8 @@ plot    "plot-git-ops" using 1:3  with lines title "fetch", \
 set output "git-ops-caching.png"
 plot    "plot-git-ops" using 1:7  with lines title "clone (hit)", \
         "plot-git-ops" using 1:9  with lines title "shallow clone (hit)", \
-        "plot-git-ops" using 1:10 with lines title "push (hit)", \
         "plot-git-ops" using 1:12 with lines title "clone (miss)", \
-        "plot-git-ops" using 1:14 with lines title "shallow clone (miss)", \
-        "plot-git-ops" using 1:15 with lines title "push (miss)"
+        "plot-git-ops" using 1:14 with lines title "shallow clone (miss)"
 
 # ===================================================================================
 
