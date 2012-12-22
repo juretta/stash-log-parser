@@ -28,10 +28,10 @@ plot    "plot-git-ops" using 1:($2+$3+$4+$5) with filledcurves x1 lt rgb "#80522
 #
 set output "git-ops-lines.png"
 set title "Git operations per hour"
-plot    "plot-git-ops" using 1:5 with lines lt rgb "#80522D" title "push", \
-        "plot-git-ops" using 1:4 with lines lt rgb "#D9C293" title "shallow clone", \
-        "plot-git-ops" using 1:3 with lines lt rgb "#DED9D9" title "fetch", \
-        "plot-git-ops" using 1:2 with lines lt rgb "#253B57" title "clone"
+plot    "plot-git-ops" using 1:5 with lines title "push", \
+        "plot-git-ops" using 1:4 with lines title "shallow clone", \
+        "plot-git-ops" using 1:3 with lines title "fetch", \
+        "plot-git-ops" using 1:2 with lines title "clone"
 
 # ===================================================================================
 
