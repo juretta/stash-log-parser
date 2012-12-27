@@ -47,3 +47,31 @@ data files and generate gnuplot graphics as PNG images.
 
 
     $> ./regenerate-graphs.sh '/data/stash-access-log/atlassian-stash-access-2012-09*.log*'
+
+Access log format
+=================
+
+Fields:
+
+* Ip address. If there are multiple addresses, the first address is the 'real' ip address and the remainder the IPs of intermediary proxies
+* Protocol: http/https/ssh
+* Request id of the format: i6x3112x1, where:
+	* i = start of the request, o = end of the request
+	* 6 = minute in day => 0:00:06
+	* x = separator
+	* 3112 = request number since last restart
+	* x = separator
+	* 1 = number of requests being serviced concurrently at the start of the request
+* Username: only available on the end of the request
+* Date/Time
+* Action:
+	* for HTTP requests: "<http-method> <request-url> <http-version>"
+	* for SSH commands: the ssh command-line
+* Request details:
+	* for HTTP: "<referrer-url>" "<user-agent>"
+	* for SSH: -
+* Labels: used in the application to add 'classifications' to requests. Currently supported:
+	* type of hosting request: push | fetch | clone | shallow clone | refs
+	* clone cache: cache:hit | cache:miss
+* Response time in millis
+* Session-id
