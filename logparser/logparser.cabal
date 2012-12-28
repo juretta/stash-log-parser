@@ -30,6 +30,7 @@ test-suite logparser-testsuite
                             containers,
                             text,
                             unordered-containers,
+                            aeson,
                             QuickCheck >= 2.4.0.1
 
 executable logparser
@@ -45,7 +46,9 @@ executable logparser
                             mtl >= 2.0.0.0 && < 3,
                             text,
                             bzlib,
-                            unordered-containers >= 0.2
+                            containers,
+                            unordered-containers >= 0.2,
+                            aeson
     ghc-options:
                             -Wall
                             -fno-warn-unused-do-bind

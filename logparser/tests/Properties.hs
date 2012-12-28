@@ -7,7 +7,7 @@ import qualified Test.HUnit as H
 import Stash.Log.Analyser
 import Stash.Log.Parser
 import Stash.Log.GitOpsAnalyser
-import Stash.Log.Common (sortLogFiles)
+import Stash.Log.File (sortLogFiles)
 import Data.Maybe
 import Test.QuickCheck hiding ((.&.))
 import Test.Framework (Test, defaultMain, testGroup)
