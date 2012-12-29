@@ -19,19 +19,7 @@ import Stash.Log.Analyser
 import Stash.Log.GitOpsAnalyser
 import Stash.Log.File
 import Text.Printf (printf)
-import Data.Aeson
-
-
-readConfig :: String -> IO (Maybe String)
-readConfig key = do
-        json <- L.readFile "logparser.state"
-        return $ (decode json :: Maybe (M.Map String String)) >>= M.lookup key
-
-readLogFiles :: String -> [FilePath] -> IO [L.ByteString]
-readLogFiles key path = do
-        date <- readConfig key
-        toLines (createPredicate date) path
-        where createPredicate maybeDate = maybe (\_ -> True) (\date -> (\file -> True)) maybeDate
+import Data.Aeson (decode)
 
 
 generateProtocolData :: (Input -> [ProtocolStats]) -> [FilePath] -> IO ()
@@ -61,11 +49,24 @@ generateCloneRequestDurations g path = do
                 -> printf "%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%s|%s\n" (show date) c cm f fm s sm p pm r rm clientIp (S.unpack username)) plotData
 
 parseAndPrint :: (Show a) => (Input -> a) -> [FilePath] -> IO ()
-parseAndPrint f path = print . f . L.lines =<< readFiles (\x -> True) path
+parseAndPrint f path = print . f . L.lines =<< readFiles (const True) path
 
 printCountLines :: (Show a) => (L.ByteString -> a) -> [FilePath] -> IO ()
-printCountLines f path = print . f =<< readFiles (\x -> True) path
+printCountLines f path = print . f =<< readFiles (const True) path
 
 formatLogDate :: LogDate -> String
 formatLogDate date = printf "%04d-%02d-%02d %02d:%02d" (getYear date) (getMonth date)
                             (getDay date) (getHour date) (getMinute date)
+
+-- =================================================================================
+
+readConfig :: String -> IO (Maybe String)
+readConfig key = do
+        json <- L.readFile "logparser.state"
+        return $ (decode json :: Maybe (M.Map String String)) >>= M.lookup key
+
+readLogFiles :: String -> [FilePath] -> IO [L.ByteString]
+readLogFiles key path = do
+        date <- readConfig key
+        toLines (createPredicate date) path
+        where createPredicate = maybe (const True) (\date -> (\file -> isFileNewer file date))

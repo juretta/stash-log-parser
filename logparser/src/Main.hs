@@ -1,21 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import qualified Data.ByteString.Lazy.Char8 as L
-import qualified Data.ByteString.Char8 as S
-import qualified Data.Map as M
-import Stash.Log.Parser
 import Stash.Log.Analyser
 import Stash.Log.GitOpsAnalyser
 import Stash.Log.Output
-import Stash.Log.File (sortLogFiles, toLines, readFiles)
 import Data.Default
-import Data.List (isSuffixOf)
-import Data.Maybe (maybe)
-import Data.Aeson
 import UI.Command
 import Prelude hiding (takeWhile)
-import Control.Monad (liftM)
 import Control.Monad.Trans (liftIO)
 
 -- =================================================================================
