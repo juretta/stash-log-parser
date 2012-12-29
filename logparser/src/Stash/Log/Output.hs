@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Stash.Log.Output
 ( printProtocolData
@@ -68,4 +68,4 @@ readLogFiles :: String -> [FilePath] -> IO [L.ByteString]
 readLogFiles key path = do
         date <- readConfig key
         toLines (createPredicate date) path
-        where createPredicate = maybe (const True) (\date -> (\file -> isFileNewer file date))
+        where createPredicate = maybe (const True) $ flip isFileNewer
