@@ -41,28 +41,28 @@ countRequests = defCmd {
 
 maxConn = defCmd {
                 cmdName = "maxConn",
-                cmdHandler = commandHandler $ generatePlotDataConcurrentConn plotDataConcurrentConnHour,
+                cmdHandler = commandHandler $ printPlotDataConcurrentConn plotDataConcurrentConnHour,
                 cmdCategory = "Logfile analysis",
                 cmdShortDesc = "Show the maximum number of concurrent requests per hour"
         }
 
 summarizeGitOperations = defCmd {
                 cmdName = "gitOperations",
-                cmdHandler = commandHandler $ generatePlotDataGitOps analyseGitOperations,
+                cmdHandler = commandHandler $ printPlotDataGitOps analyseGitOperations,
                 cmdCategory = "Logfile analysis",
                 cmdShortDesc = "Aggregate git operations per hour. Show counts for fetch, clone, push, pull and ref advertisement"
         }
 
 requestDurations = defCmd {
                 cmdName = "requestDurations",
-                cmdHandler = commandHandler $ generateCloneRequestDurations cloneRequestDuration,
+                cmdHandler = commandHandler $ printCloneRequestDurations cloneRequestDuration,
                 cmdCategory = "Logfile analysis",
                 cmdShortDesc = "Show the duration of clone operations over time"
         }
 
 summarizeProtocolStats = defCmd {
                 cmdName = "protocolStats",
-                cmdHandler = commandHandler $ generateProtocolData protocolStatsByHour,
+                cmdHandler = commandHandler $ printProtocolData protocolStatsByHour,
                 cmdCategory = "Logfile analysis",
                 cmdShortDesc = "Aggregate the number of git operations per hour based on the access protocol (http(s) vs. SSH)"
         }

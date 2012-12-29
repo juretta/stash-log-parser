@@ -1,10 +1,10 @@
 {-# LANGUAGE OverloadedStrings, BangPatterns #-}
 
 module Stash.Log.Output
-( generateProtocolData
-, generateCloneRequestDurations
-, generatePlotDataConcurrentConn
-, generatePlotDataGitOps
+( printProtocolData
+, printCloneRequestDurations
+, printPlotDataConcurrentConn
+, printPlotDataGitOps
 , parseAndPrint
 , printCountLines
 ) where
@@ -22,28 +22,28 @@ import Text.Printf (printf)
 import Data.Aeson (decode)
 
 
-generateProtocolData :: (Input -> [ProtocolStats]) -> [FilePath] -> IO ()
-generateProtocolData f path = do
-        plotData <- liftM f $ readLogFiles "generateProtocolData" path
+printProtocolData :: (Input -> [ProtocolStats]) -> [FilePath] -> IO ()
+printProtocolData f path = do
+        plotData <- liftM f $ readLogFiles "printProtocolData" path
         printf "# Date | SSH | HTTP(s)\n"
         mapM_ (\(ProtocolStats date ssh http) -> printf "%s|%d|%d\n" date ssh http) plotData
 
-generatePlotDataGitOps :: (Input -> [GitOperationStats]) -> [FilePath] -> IO ()
-generatePlotDataGitOps f path = do
-        plotData <- liftM f $ readLogFiles "generatePlotDataGitOps" path
+printPlotDataGitOps :: (Input -> [GitOperationStats]) -> [FilePath] -> IO ()
+printPlotDataGitOps f path = do
+        plotData <- liftM f $ readLogFiles "printPlotDataGitOps" path
         printf "# Date | clone | fetch | shallow clone | push | ref advertisement | clone (hit) | fetch (hit) | shallow clone (hit) | push (hit) | ref advertisement (hit) | clone (miss) | fetch (miss) | shallow clone (miss) | push (miss) | ref advertisement (miss)\n"
         mapM_ (\(GitOperationStats date [a,b,c,d,e] [aHit,bHit,cHit,dHit,eHit])
                 -> printf "%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d\n" date (a+aHit) (b+bHit) (c+cHit) (d+dHit) (e+eHit) aHit bHit cHit dHit eHit a b c d e) plotData
 
-generatePlotDataConcurrentConn :: (Input -> [DateValuePair]) -> [FilePath] -> IO ()
-generatePlotDataConcurrentConn f path = do
-        plotData <- liftM f $ readLogFiles "generatePlotDataConcurrentConn" path
+printPlotDataConcurrentConn :: (Input -> [DateValuePair]) -> [FilePath] -> IO ()
+printPlotDataConcurrentConn f path = do
+        plotData <- liftM f $ readLogFiles "printPlotDataConcurrentConn" path
         printf "# Date | Max concurrent connection\n"
         mapM_ (\pd -> printf "%s|%d\n" (formatLogDate $ getLogDate pd) (getValue pd)) plotData
 
-generateCloneRequestDurations :: (Input -> [RequestDurationStat]) -> [FilePath] -> IO ()
-generateCloneRequestDurations g path = do
-        plotData <- liftM g $ readLogFiles "generateCloneRequestDurations" path
+printCloneRequestDurations :: (Input -> [RequestDurationStat]) -> [FilePath] -> IO ()
+printCloneRequestDurations g path = do
+        plotData <- liftM g $ readLogFiles "printCloneRequestDurations" path
         printf "# Date | Clone duration (cache hit) | Clone duration (cache miss) | Fetch (hit) | Fetch (miss) | Shallow Clone (hit) | Shallow Clone (miss) | Push (hit) | Push (miss) | Ref adv (hit) | Ref adv (miss) | Client IP | Username \n"
         mapM_ (\(RequestDurationStat date clientIp [cm,fm,sm,pm,rm] [c,f,s,p,r] username)
                 -> printf "%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%s|%s\n" (show date) c cm f fm s sm p pm r rm clientIp (S.unpack username)) plotData
