@@ -55,7 +55,7 @@ collectRequestDurations rawLines p = map m $ filter f $ parseLogLines rawLines
         where clientIp line = head $ split "," (S.unpack $ getRemoteAdress line)
               ops           = [isClone, isFetch, isShallowClone, isPush, isRefAdvertisement]
               f line        = isOutgoingLogLine line && p line && isGitOperation line
-              m line        =  let  duration    = getRequestDuration line
+              m line        =  let  duration    = fromMaybe 0 $ getRequestDuration line
                                     zero        = replicate 5 0
                                     inc op      = if op line then (+duration) else id
                                     missOps     = map (inc . uncachedOperation) ops

@@ -20,7 +20,7 @@ import qualified Data.ByteString.Lazy.Char8 as L
 import qualified Data.Text as T
 import Data.Attoparsec.Char8 hiding (char, space, take)
 import Prelude hiding (takeWhile)
-import Data.ByteString.Char8 (readInteger)
+import Data.ByteString.Char8 (readInteger, readInt)
 import Data.String.Utils (split)
 import Data.Maybe (mapMaybe)
 import Text.Printf (printf)
@@ -51,7 +51,7 @@ data LogLine = LogLine {
     ,getAction              :: Action
     ,getDetails             :: S.ByteString
     ,getLabels              :: [String]
-    ,getRequestDuration     :: Int
+    ,getRequestDuration     :: Maybe Int
     ,getSessionId           :: S.ByteString
 } deriving (Show, Eq)
 
@@ -125,10 +125,20 @@ parseLogEntryDate = do
 
 logEntry :: Parser S.ByteString
 logEntry = do
-   entry <- takeTill (== '|')
-   pipe
-   space
+   entry <- parseEntry
    return $ S.init entry
+
+parseDuration :: Parser (Maybe Int)
+parseDuration = do
+    entry <- parseEntry
+    return $ fmap fst (readInt entry)
+
+parseEntry :: Parser S.ByteString
+parseEntry = do
+    entry <- takeTill (== '|')
+    pipe
+    space
+    return entry
 
 -- | Parse the request Id. A request id consist of a a char indicating an
 -- request 'i' or response 'o', followed by the minute of the day, a request
@@ -192,11 +202,10 @@ parseLine = do
     action <- parseAction
     details <- logEntry
     labels_ <- logEntry
-    rawDuration <- logEntry
+    duration <- parseDuration
     sessionId <- logEntry
     let labels = map trim $ split "," (S.unpack labels_)
         username = if rawUsername == "-" then Nothing else Just rawUsername
-        duration = read $ S.unpack rawDuration
     return $ LogLine remoteAddress protocol requestId username date
                     action details labels duration sessionId
 

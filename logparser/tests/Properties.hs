@@ -38,6 +38,9 @@ parsedLogLine2 = parseLogLine inputLine
 parsedLogLine3 = parseLogLine inputLine
     where inputLine = "172.16.3.7 | ssh | o949x7523178x1 | atlaseye_user | 2012-10-23 15:49:46,461 | git-upload-pack '/CONF/teamcal.git' | - | fetch | 117 | de84i5 | "
 
+parsedLogLine4 = parseLogLine inputLine
+    where inputLine = "63.246.22.41,172.16.1.187 | https | i0x4771443x6 | - | 2012-12-10 00:00:00,199 | \"GET /git/STASH/stash.git/info/refs HTTP/1.1\" | \"\" \"git/1.7.4.1\" | - | - | - | "
+
 test_parseLogEntryDate = H.assertEqual
     "Should parse the date correctly"
     (LogDate 2012 8 22 18 32 08 505)
@@ -80,6 +83,16 @@ test_logLineParseLabels = H.assertEqual
     "Should parse the labels correctly"
     ["shallow clone"]
     (getLabels $ fromJust parsedLogLine)
+
+test_logLineParseDuration = H.assertEqual
+    "Should parse the duration correctly"
+    (Just 117)
+    (getRequestDuration $ fromJust parsedLogLine3)
+
+test_logLineParseDurationNothing = H.assertEqual
+    "Should parse the duration correctly"
+    Nothing
+    (getRequestDuration $ fromJust parsedLogLine4)
 
 test_logLineParseRequestId = H.assertEqual
     "Should parse the request id"
@@ -231,6 +244,8 @@ tests =
         ,testCase "parser/parse protocol (https)" test_logLineParseProtocol
         ,testCase "parser/parse protocol (ssh)" test_logLineParseProtocolSsh
         ,testCase "parser/parse request id" test_logLineParseRequestId
+        ,testCase "parser/parse duration" test_logLineParseDuration
+        ,testCase "parser/parse duration - Nothing" test_logLineParseDurationNothing
         ,testCase "parser/parse action" test_logLineParseAction
         ,testCase "parser/parse details" test_logLineParseDetails
         ,testCase "parser/parse labels" test_logLineParseLabels
