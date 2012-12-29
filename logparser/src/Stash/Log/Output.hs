@@ -54,11 +54,10 @@ parseAndPrint f path = print . f . L.lines =<< readFiles (const True) path
 printCountLines :: (Show a) => (L.ByteString -> a) -> [FilePath] -> IO ()
 printCountLines f path = print . f =<< readFiles (const True) path
 
+-- =================================================================================
 formatLogDate :: LogDate -> String
 formatLogDate date = printf "%04d-%02d-%02d %02d:%02d" (getYear date) (getMonth date)
                             (getDay date) (getHour date) (getMinute date)
-
--- =================================================================================
 
 readConfig :: String -> IO (Maybe String)
 readConfig key = do
