@@ -2,7 +2,7 @@
 
 module Stash.Log.Output
 ( printProtocolData
-, printCloneRequestDurations
+, printGitRequestDurations
 , printPlotDataConcurrentConn
 , printPlotDataGitOps
 , parseAndPrint
@@ -41,8 +41,8 @@ printPlotDataConcurrentConn f path = do
         printf "# Date | Max concurrent connection\n"
         mapM_ (\pd -> printf "%s|%d\n" (formatLogDate $ getLogDate pd) (getValue pd)) plotData
 
-printCloneRequestDurations :: (Input -> [RequestDurationStat]) -> [FilePath] -> IO ()
-printCloneRequestDurations g path = do
+printGitRequestDurations :: (Input -> [RequestDurationStat]) -> [FilePath] -> IO ()
+printGitRequestDurations g path = do
         plotData <- liftM g $ readLogFiles "printCloneRequestDurations" path
         printf "# Date | Clone duration (cache hit) | Clone duration (cache miss) | Fetch (hit) | Fetch (miss) | Shallow Clone (hit) | Shallow Clone (miss) | Push (hit) | Push (miss) | Ref adv (hit) | Ref adv (miss) | Client IP | Username \n"
         mapM_ (\(RequestDurationStat date clientIp [cm,fm,sm,pm,rm] [c,f,s,p,r] username)

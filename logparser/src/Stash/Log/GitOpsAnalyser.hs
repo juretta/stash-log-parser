@@ -4,7 +4,7 @@ module Stash.Log.GitOpsAnalyser
 ( GitOperationStats(..)
 , analyseGitOperations
 , RequestDurationStat(..)
-, cloneRequestDuration
+, gitRequestDuration
 , isRefAdvertisement
 , protocolCount
 ) where
@@ -41,8 +41,8 @@ analyseGitOperations rawLines =
     in analyseGitOperations' logDateEqHour formatLogDate rawLines
 
 -- | Return the duration of clone (clone and shallow clone) operations
-cloneRequestDuration :: Input -> [RequestDurationStat]
-cloneRequestDuration rawLines = collectRequestDurations rawLines authenticatedGitOp
+gitRequestDuration :: Input -> [RequestDurationStat]
+gitRequestDuration rawLines = collectRequestDurations rawLines authenticatedGitOp
 
 
 -- =================================================================================

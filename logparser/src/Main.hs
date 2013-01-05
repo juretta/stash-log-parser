@@ -25,18 +25,12 @@ logparser = def {
 
 
 count, countRequests, maxConn, summarizeGitOperations, requestDurations, summarizeProtocolStats, debugParser :: Command ()
-count = defCmd {
-                cmdName = "count",
-                cmdHandler = commandHandler $ printCountLines countLines,
-                cmdCategory = "Logfile analysis",
-                cmdShortDesc = "Count the number of lines in the given logfile"
-        }
 
 countRequests = defCmd {
                 cmdName = "countRequests",
                 cmdHandler = commandHandler $ parseAndPrint countRequestLines,
                 cmdCategory = "Logfile analysis",
-                cmdShortDesc = "Count the number requests"
+                cmdShortDesc = "Count the number of requests"
         }
 
 maxConn = defCmd {
@@ -54,10 +48,10 @@ summarizeGitOperations = defCmd {
         }
 
 requestDurations = defCmd {
-                cmdName = "requestDurations",
-                cmdHandler = commandHandler $ printCloneRequestDurations cloneRequestDuration,
+                cmdName = "gitDurations",
+                cmdHandler = commandHandler $ printGitRequestDurations gitRequestDuration,
                 cmdCategory = "Logfile analysis",
-                cmdShortDesc = "Show the duration of clone operations over time"
+                cmdShortDesc = "Show the duration of git operations over time"
         }
 
 summarizeProtocolStats = defCmd {
@@ -72,6 +66,13 @@ debugParser = defCmd {
                 cmdHandler = commandHandler $ parseAndPrint showLines,
                 cmdCategory = "Debug",
                 cmdShortDesc = "Parse and print the first five lines of the log file"
+        }
+
+count = defCmd {
+                cmdName = "count",
+                cmdHandler = commandHandler $ printCountLines countLines,
+                cmdCategory = "Debug",
+                cmdShortDesc = "Count the number of lines in the given logfile(s)"
         }
 
 commandHandler f = do
