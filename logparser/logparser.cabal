@@ -42,12 +42,11 @@ executable logparser
                             bytestring >= 0.9,
                             MissingH,
                             attoparsec >= 0.10,
-                            ui-command,
-                            data-default,
                             mtl >= 2.0.0.0 && < 3,
                             text,
                             bzlib,
                             containers,
+                            cmdargs >= 0.10,
                             unordered-containers >= 0.2,
                             aeson
     ghc-options:
