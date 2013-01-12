@@ -7,7 +7,7 @@ import qualified Test.HUnit as H
 import Stash.Log.Analyser
 import Stash.Log.Parser
 import Stash.Log.GitOpsAnalyser
-import Stash.Log.File (sortLogFiles)
+import Stash.Log.Input
 import Data.Maybe
 import Test.QuickCheck hiding ((.&.))
 import Test.Framework (Test, defaultMain, testGroup)
@@ -212,6 +212,37 @@ test_sortFilesAsc = H.assertEqual
                      "atlassian-stash-access.log",
                      "atlassian-stash-access-2012-11-29.2.log.bz2"]
 
+
+test_filterFilesDropLast = H.assertEqual
+    "Should drop the last day"
+    ["atlassian-stash-access-2012-11-28.0.log.bz2",
+     "atlassian-stash-access-2012-11-29.0.log.bz2",
+     "atlassian-stash-access-2012-11-29.1.log.bz2"]
+     (filterLastDay input)
+    where input = ["atlassian-stash-access-2012-11-28.0.log.bz2",
+                     "atlassian-stash-access-2012-11-29.0.log.bz2",
+                     "atlassian-stash-access-2012-11-29.1.log.bz2",
+                     "atlassian-stash-access-2012-11-30.0.log.bz2",
+                     "atlassian-stash-access-2012-11-30.1.log.bz2",
+                     "atlassian-stash-access.log"]
+
+test_filterFilesSkipUntilDate = H.assertEqual
+    "Should drop files up to the given date"
+    ["atlassian-stash-access-2012-11-30.0.log.bz2",
+     "atlassian-stash-access-2012-11-30.1.log.bz2",
+     "atlassian-stash-access-2012-11-31.0.log.bz2",
+     "atlassian-stash-access-2012-11-31.1.log.bz2",
+     "atlassian-stash-access.log"]
+     (dropUntilDate "2012-11-30" input)
+    where input = ["atlassian-stash-access-2012-11-28.0.log.bz2",
+                     "atlassian-stash-access-2012-11-29.0.log.bz2",
+                     "atlassian-stash-access-2012-11-29.1.log.bz2",
+                     "atlassian-stash-access-2012-11-30.0.log.bz2",
+                     "atlassian-stash-access-2012-11-30.1.log.bz2",
+                     "atlassian-stash-access-2012-11-31.0.log.bz2",
+                     "atlassian-stash-access-2012-11-31.1.log.bz2",
+                     "atlassian-stash-access.log"]
+
 ------------------------------------------------------------------------
 -- Test harness
 
@@ -233,9 +264,11 @@ tests =
         ,testCase "analyser/isRefAdvertisement http action" test_identifyRefAdvertisement_HttpAction
         ,testCase "analyser/isRefAdvertisement http label" test_identifyRefAdvertisement_HttpLabel
       ],
-      testGroup "Common"
+      testGroup "Files"
       [
-        testCase "common/sortLogFiles" test_sortFilesAsc
+        testCase "files/sortLogFiles" test_sortFilesAsc
+       ,testCase "files/drop last day" test_filterFilesDropLast
+       ,testCase "files/skip until date" test_filterFilesSkipUntilDate
       ],
       testGroup "parser"
       [ testCase "parser/parse empty String" test_logLineParserEmpty

@@ -1,21 +1,30 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Stash.Log.File
+module Stash.Log.Input
 ( sortLogFiles
-, toLines
 , readFiles
 , FileInfo(..)
 , extractFileInfo
 , isFileNewer
+, filterLastDay
+, dropUntilDate
+, readLogFiles
+, RunConfig(..)
+, newRunConfig
 ) where
 
 import qualified Data.ByteString.Lazy.Char8 as L
 import qualified Codec.Compression.BZip as BZip
+import qualified Data.Map as M
 import Data.Monoid (mappend)
-import Data.List (isSuffixOf, sortBy)
+import Data.Maybe (isJust, fromMaybe, fromJust)
+import Data.List (isSuffixOf, sortBy, groupBy)
 import Data.String.Utils (split)
 import System.Path.NameManip
-import Control.Monad (liftM)
+import Control.Monad (liftM, liftM2)
+import Data.Aeson (decode)
+import Data.Time.Clock
+import Data.Time.Calendar
 import Debug.Trace
 
 data FileInfo = FileInfo {
@@ -23,7 +32,14 @@ data FileInfo = FileInfo {
     ,month      :: String
     ,day        :: String
     ,counter    :: Int
-} deriving (Show, Eq, Ord)
+} deriving (Show, Ord, Eq)
+
+newtype FileDateInfo = FileDateInfo FileInfo
+
+-- | Ignore the counter for equality checks
+instance Eq FileDateInfo where
+  (FileDateInfo (FileInfo year1 month1 day1 _)) == (FileDateInfo (FileInfo year2 month2 day2 _))
+                            = year1 == year2 && month1 == month2 && day1 == day2
 
 type Date = String
 
@@ -55,16 +71,31 @@ extractFileInfo path = let elems = drop 3 $ split "-" $ extractFile path
                                                              _           -> Nothing
                                _                     -> Nothing
 
+extractFileDateInfo :: FilePath -> Maybe FileDateInfo
+extractFileDateInfo path = fmap (FileDateInfo) $ extractFileInfo path
+
 -- | Read the list of files and return a list of lines. The input files will be
 -- filtered using the function (FilePath -> Bool)
-toLines :: (FilePath -> Bool) -> [FilePath] -> IO [L.ByteString]
-toLines p files = liftM L.lines $ readFiles p files
+--toLines :: (FilePath -> Bool) -> [FilePath] -> IO [L.ByteString]
+--toLines p files = liftM L.lines $ readFiles p files
+
+toLines :: [FilePath] -> IO [L.ByteString]
+toLines files = liftM L.lines $ readFiles files
 
 -- | Read the list of files and turn them into a lazy ByteString. The input files will be
 -- filtered using the function (FilePath -> Bool)
-readFiles :: (FilePath -> Bool) -> [FilePath] -> IO L.ByteString
-readFiles f files = trace ("filteredFiles: " ++ show filteredFiles)  fmap L.concat . mapM readCompressedOrUncompressed $ filteredFiles
-            where filteredFiles = filter f $ sortLogFiles files
+readFiles :: [FilePath] -> IO L.ByteString
+readFiles files = trace ("filteredFiles: " ++ show filteredFiles)  fmap L.concat . mapM readCompressedOrUncompressed $ filteredFiles
+            where filteredFiles = sortLogFiles files
+
+filterLastDay :: [FilePath] -> [FilePath]
+filterLastDay []    = []
+filterLastDay files = concat . init . gr $ filterLastFile files
+    where filterLastFile    = filter (isJust . extractFileInfo)
+          gr                = groupBy (\a b -> fromMaybe False $ liftM2 (==) (extractFileDateInfo a) (extractFileDateInfo b))
+
+dropUntilDate :: Date -> [FilePath] -> [FilePath]
+dropUntilDate date files = dropWhile (\f -> not $ isFileNewer f date) files
 
 -- =================================================================================
 
@@ -75,3 +106,28 @@ readCompressedOrUncompressed :: FilePath -> IO L.ByteString
 readCompressedOrUncompressed path = if ".bz2" `isSuffixOf` path
                                     then liftM BZip.decompress $ L.readFile path
                                     else L.readFile path
+data RunConfig = RunConfig {
+    cfgProgressive :: Bool
+    } deriving (Show)
+
+newRunConfig :: RunConfig
+newRunConfig = RunConfig False
+
+readConfig :: String -> IO (Maybe String)
+readConfig key = do
+        json <- L.readFile "logparser.state"
+        return $ (decode json :: Maybe (M.Map String String)) >>= M.lookup key
+
+today :: IO (Integer,Int,Int) -- :: (year,month,day)
+today = getCurrentTime >>= return . toGregorian . utctDay
+
+readLogFiles :: RunConfig -> String -> [FilePath] -> IO [L.ByteString]
+readLogFiles cfg key path = do
+        date <- readConfig key
+        now <- today
+        let progressive = cfgProgressive cfg
+        trace ("date: " ++ show date ++ " key: " ++ key ++ " now: " ++ show now) (if progressive && (isJust date) then
+                toLines $ (dropUntilDate $ fromJust date) $ filterLastDay path
+            else
+                toLines path
+                )

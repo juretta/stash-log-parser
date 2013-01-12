@@ -30,6 +30,7 @@ test-suite logparser-testsuite
                             containers,
                             text,
                             unordered-containers,
+                            time,
                             aeson,
                             bzlib,
                             QuickCheck >= 2.4.0.1
@@ -37,7 +38,7 @@ test-suite logparser-testsuite
 executable logparser
     main-is:                Main.hs
     hs-source-dirs:         src
-    other-modules:          Stash.Log.Analyser, Stash.Log.Parser, Stash.Log.GitOpsAnalyser, Stash.Log.Common
+    other-modules:          Stash.Log.Analyser, Stash.Log.Parser, Stash.Log.GitOpsAnalyser, Stash.Log.Common, Stash.Log.Output, Stash.Log.Input
     build-depends:          base < 5 && >= 3,
                             bytestring >= 0.9,
                             MissingH,
@@ -48,9 +49,11 @@ executable logparser
                             containers,
                             cmdargs >= 0.10,
                             unordered-containers >= 0.2,
+                            time,
                             aeson
     ghc-options:
                             -Wall
+                            -- -Werror
                             -fno-warn-unused-do-bind
                             -rtsopts
                             -O2
