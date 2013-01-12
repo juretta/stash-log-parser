@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, DeriveDataTypeable, RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
 module Main where
 
 import Stash.Log.Analyser hiding (ProtocolStats)
@@ -70,16 +70,16 @@ mode = cmdArgsMode $ modes [maxConn, countRequests, gitOperations, gitDurations,
 
 
 run :: LogParser -> IO ()
-run (MaxConn files)                     = stream plotDataConcurrentConnHour printPlotDataConcurrentConn newRunConfig "printPlotDataConcurrentConn" files
-run (CountRequests files)               = stream countRequestLines parseAndPrint newRunConfig "countRequestLines" files
-run (GitOperations files progressive)   = stream analyseGitOperations printPlotDataGitOps (RunConfig progressive) "printPlotDataGitOps" files
-run (GitDurations files progressive)    = stream gitRequestDuration printGitRequestDurations (RunConfig progressive) "gitRequestDuration" files
-run (ProtocolStats files)               = stream protocolStatsByHour printProtocolData newRunConfig "printProtocolData" files
-run (Count files)                       = printCountLines countLines files
-run (DebugParser files progressive)     = stream showLines parseAndPrint newRunConfig "showLines" files
+run (MaxConn files')                     = stream plotDataConcurrentConnHour printPlotDataConcurrentConn newRunConfig "printPlotDataConcurrentConn" files'
+run (CountRequests files')               = stream countRequestLines print newRunConfig "countRequestLines" files'
+run (GitOperations files' progressive')  = stream analyseGitOperations printPlotDataGitOps (RunConfig progressive') "printPlotDataGitOps" files'
+run (GitDurations files' progressive')   = stream gitRequestDuration printGitRequestDurations (RunConfig progressive') "gitRequestDuration" files'
+run (ProtocolStats files')               = stream protocolStatsByHour printProtocolData newRunConfig "printProtocolData" files'
+run (Count files')                       = printCountLines countLines files'
+run (DebugParser files' progressive')    = stream showLines print (RunConfig progressive') "showLines" files'
 
 stream :: (Input -> a) -> (a -> IO ()) -> RunConfig -> String -> [FilePath] -> IO ()
-stream analyze output runConfig name files = output =<< (liftM analyze $ readLogFiles runConfig name files)
+stream analyze output runConfig name' files' = output =<< liftM analyze (readLogFiles runConfig name' files')
 
 main :: IO ()
 main = do

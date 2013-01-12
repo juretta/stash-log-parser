@@ -53,7 +53,7 @@ executable logparser
                             aeson
     ghc-options:
                             -Wall
-                            -- -Werror
+                            -Werror
                             -fno-warn-unused-do-bind
                             -rtsopts
                             -O2

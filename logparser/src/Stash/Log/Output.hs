@@ -5,23 +5,17 @@ module Stash.Log.Output
 , printGitRequestDurations
 , printPlotDataConcurrentConn
 , printPlotDataGitOps
-, parseAndPrint
 , printCountLines
 ) where
 
 
 import qualified Data.ByteString.Lazy.Char8 as L
 import qualified Data.ByteString.Char8 as S
-import qualified Data.Map as M
-import Control.Monad (liftM)
-import Control.Monad.Reader
-import Data.Maybe (isJust, fromJust)
 import Stash.Log.Parser
 import Stash.Log.Analyser
 import Stash.Log.GitOpsAnalyser
 import Stash.Log.Input
 import Text.Printf (printf)
-import Debug.Trace
 
 printProtocolData :: [ProtocolStats] -> IO ()
 printProtocolData plotData = do
@@ -44,9 +38,6 @@ printGitRequestDurations plotData = do
         printf "# Date | Clone duration (cache hit) | Clone duration (cache miss) | Fetch (hit) | Fetch (miss) | Shallow Clone (hit) | Shallow Clone (miss) | Push (hit) | Push (miss) | Ref adv (hit) | Ref adv (miss) | Client IP | Username \n"
         mapM_ (\(RequestDurationStat date clientIp [cm,fm,sm,pm,rm] [c,f,s,p,r] username)
                 -> printf "%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%s|%s\n" (show date) c cm f fm s sm p pm r rm clientIp (S.unpack username)) plotData
-
-parseAndPrint :: (Show a) => a -> IO ()
-parseAndPrint d = print d
 
 printCountLines :: (Show a) => (L.ByteString -> a) -> [FilePath] -> IO ()
 printCountLines f path = print . f =<< readFiles path

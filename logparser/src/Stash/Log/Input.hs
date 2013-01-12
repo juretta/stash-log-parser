@@ -48,7 +48,8 @@ type Date = String
 isFileNewer :: FilePath -> Date -> Bool
 isFileNewer file date = (Just $ base (unpack date)) <= extractFileInfo file
         where base (year':month':day':_) = FileInfo year' month' day' 0
-              unpack                  = split "-"
+              base _                     = FileInfo "" "" "" 0
+              unpack                     = split "-"
 
 -- | Sort the logfiles by date and log file sequence number
 -- The logfile naming scheme is: "atlassian-stash-access-2012-11-29.0.log(.bz2)"
@@ -58,7 +59,6 @@ sortLogFiles = sortBy logFilePred
           logFilePred logFileName1 logFileName2 = sortPred (extractSortPairs logFileName1) (extractSortPairs logFileName2)
           extractSortPairs path = maybe ("9999", 0) asPair $ extractFileInfo path
           asPair (FileInfo year' month' day' counter') = (year' ++ "-" ++ month' ++ "-" ++ day', counter')
-          asPair _                                     = ("", 0)
 
 -- | Try to extract the FileInfo out of the given file. This function assumes
 -- that the given file follows the naming scheme for the access log archive
@@ -72,7 +72,7 @@ extractFileInfo path = let elems = drop 3 $ split "-" $ extractFile path
                                _                     -> Nothing
 
 extractFileDateInfo :: FilePath -> Maybe FileDateInfo
-extractFileDateInfo path = fmap (FileDateInfo) $ extractFileInfo path
+extractFileDateInfo path = fmap FileDateInfo $ extractFileInfo path
 
 -- | Read the list of files and return a list of lines. The input files will be
 -- filtered using the function (FilePath -> Bool)
@@ -95,7 +95,7 @@ filterLastDay files = concat . init . gr $ filterLastFile files
           gr                = groupBy (\a b -> fromMaybe False $ liftM2 (==) (extractFileDateInfo a) (extractFileDateInfo b))
 
 dropUntilDate :: Date -> [FilePath] -> [FilePath]
-dropUntilDate date files = dropWhile (\f -> not $ isFileNewer f date) files
+dropUntilDate date = dropWhile (\ f -> not $ isFileNewer f date)
 
 -- =================================================================================
 
@@ -119,15 +119,12 @@ readConfig key = do
         return $ (decode json :: Maybe (M.Map String String)) >>= M.lookup key
 
 today :: IO (Integer,Int,Int) -- :: (year,month,day)
-today = getCurrentTime >>= return . toGregorian . utctDay
+today = liftM (toGregorian . utctDay) getCurrentTime
 
 readLogFiles :: RunConfig -> String -> [FilePath] -> IO [L.ByteString]
 readLogFiles cfg key path = do
         date <- readConfig key
         now <- today
         let progressive = cfgProgressive cfg
-        trace ("date: " ++ show date ++ " key: " ++ key ++ " now: " ++ show now) (if progressive && (isJust date) then
-                toLines $ (dropUntilDate $ fromJust date) $ filterLastDay path
-            else
-                toLines path
-                )
+        trace ("date: " ++ show date ++ " key: " ++ key ++ " now: " ++ show now) toLines
+            (if progressive && isJust date then dropUntilDate (fromJust date) $ filterLastDay path else path)
