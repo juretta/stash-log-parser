@@ -22,9 +22,11 @@ import Data.List (isSuffixOf, sortBy, groupBy)
 import Data.String.Utils (split)
 import System.Path.NameManip
 import Control.Monad (liftM, liftM2)
-import Data.Aeson (decode)
+import Data.Aeson (decode, encode)
 import Data.Time.Clock
 import Data.Time.Calendar
+import Text.Printf (printf)
+import System.Directory (renameFile, doesFileExist)
 import Debug.Trace
 
 data FileInfo = FileInfo {
@@ -76,9 +78,6 @@ extractFileDateInfo path = fmap FileDateInfo $ extractFileInfo path
 
 -- | Read the list of files and return a list of lines. The input files will be
 -- filtered using the function (FilePath -> Bool)
---toLines :: (FilePath -> Bool) -> [FilePath] -> IO [L.ByteString]
---toLines p files = liftM L.lines $ readFiles p files
-
 toLines :: [FilePath] -> IO [L.ByteString]
 toLines files = liftM L.lines $ readFiles files
 
@@ -113,18 +112,29 @@ data RunConfig = RunConfig {
 newRunConfig :: RunConfig
 newRunConfig = RunConfig False
 
-readConfig :: String -> IO (Maybe String)
-readConfig key = do
-        json <- L.readFile "logparser.state"
-        return $ (decode json :: Maybe (M.Map String String)) >>= M.lookup key
+type Config = M.Map String String
 
-today :: IO (Integer,Int,Int) -- :: (year,month,day)
+today :: IO (Integer,Int,Int) -- (year,month,day)
 today = liftM (toGregorian . utctDay) getCurrentTime
 
 readLogFiles :: RunConfig -> String -> [FilePath] -> IO [L.ByteString]
 readLogFiles cfg key path = do
-        date <- readConfig key
-        now <- today
-        let progressive = cfgProgressive cfg
-        trace ("date: " ++ show date ++ " key: " ++ key ++ " now: " ++ show now) toLines
-            (if progressive && isJust date then dropUntilDate (fromJust date) $ filterLastDay path else path)
+        conf                <- liftM (fromMaybe M.empty) readConfig
+        (year',month',day') <- today
+        let now'            = printf "%04d-%02d-%02d" year' month' day'
+            date            = M.lookup key conf
+            progressive     = cfgProgressive cfg
+            updatedConfig   = M.insert key now' conf
+        content             <- toLines (if progressive && isJust date then dropUntilDate (fromJust date) $ filterLastDay path else path)
+        _                   <- saveConfig updatedConfig
+        return $ trace ("date: " ++ show date ++ " key: " ++ key ++ " now: " ++ now') content
+        where
+            configFile          = "logparser.state"
+            temp                = configFile ++ ".tmp"
+            saveConfig config   = do
+                            L.writeFile temp (encode config)
+                            renameFile temp configFile
+            readConfig          = do
+                            fileExists <- doesFileExist configFile
+                            json <- if fileExists then L.readFile configFile else return ""
+                            return (decode json :: Maybe Config)
