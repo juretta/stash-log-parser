@@ -31,13 +31,11 @@ plot    "clone-duration"        using 1:($2/1000)                      with line
 
 unset title
 unset xlabel
-plot    "clone-duration"        using 1:($4/1000)                      with lines title "Fetch (cache hit)", \
-        "clone-duration"        using 1:($5/1000)                      with lines title "Fetch (cache miss)", \
+plot    "clone-duration"        using 1:($5/1000)                      with lines title "Fetch", \
         "clone-duration"        using 1:($10/1000)                     with lines title "Rev adv. (cache hit)", \
         "clone-duration"        using 1:($11/1000)                     with lines title "Rev adv. (cache miss)"
 
-plot    "clone-duration"        using 1:($8/1000)                      with lines title "Push (cache hit)", \
-        "clone-duration"        using 1:($9/1000)                      with lines title "Push (cache miss)"
+plot    "clone-duration"        using 1:($9/1000)                      with lines title "Push"
 
 
 unset multiplot
