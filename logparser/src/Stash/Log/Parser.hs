@@ -163,13 +163,13 @@ separator = do
 
 -- http: "GET /scm/CONF/confluence.git/info/refs HTTP/1.1"
 -- ssh: git-upload-pack '/CONF/teamcal.git'
+-- ssh (new format): SSH - git-upload-pack '/CONF/teamcal.git'
 parseAction :: Parser Action
 parseAction = choice [parseSshAction, parseHttpAction]
 
 parseSshAction :: Parser Action
 parseSshAction = do
-    method <- takeTill (== ' ')
-    space
+    method <- takeTill (== '\'')
     single
     path <- takeTill (== '\'')
     single

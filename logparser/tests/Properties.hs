@@ -9,6 +9,7 @@ import Stash.Log.Parser
 import Stash.Log.GitOpsAnalyser
 import Stash.Log.Input
 import Data.Maybe
+import Data.List                                    (sort)
 import Test.QuickCheck hiding ((.&.))
 import Test.Framework (Test, defaultMain, testGroup)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -41,6 +42,9 @@ parsedLogLine3 = parseLogLine inputLine
 parsedLogLine4 = parseLogLine inputLine
     where inputLine = "63.246.22.41,172.16.1.187 | https | i0x4771443x6 | - | 2012-12-10 00:00:00,199 | \"GET /git/STASH/stash.git/info/refs HTTP/1.1\" | \"\" \"git/1.7.4.1\" | - | - | - | "
 
+parsedLogLine5 = parseLogLine inputLine
+    where inputLine = "172.16.3.7 | ssh | o357x407998x2 | atlaseye_user | 2013-03-05 05:57:20,505 | SSH - git-upload-pack '/CONF/teamcal.git' | - | clone | 145 | ofq0l6 | "
+
 test_parseLogEntryDate = H.assertEqual
     "Should parse the date correctly"
     (LogDate 2012 8 22 18 32 08 505)
@@ -59,6 +63,11 @@ test_logLineParseProtocolSsh = H.assertEqual
     "Should parse the protocol correctly"
     "ssh"
     (getProtocol $ fromJust parsedLogLine3)
+
+test_logLineParseProtocolSsh2 = H.assertEqual
+    "Should parse the protocol correctly"
+    "ssh"
+    (getProtocol $ fromJust parsedLogLine5)
 
 test_logLineParseAction = H.assertEqual
     "Should parse the action correctly for http"
@@ -83,6 +92,11 @@ test_logLineParseLabels = H.assertEqual
     "Should parse the labels correctly"
     ["shallow clone"]
     (getLabels $ fromJust parsedLogLine)
+
+test_logLineParseLabelsChangedLogFormat = H.assertEqual
+    "Should parse the labels correctly"
+    ["clone"]
+    (getLabels $ fromJust parsedLogLine5)
 
 test_logLineParseDuration = H.assertEqual
     "Should parse the duration correctly"
@@ -164,8 +178,8 @@ test_maxConcurrent = H.assertEqual
 
 test_protocolCount = H.assertEqual
     "Should count the protocol correctly"
-    [("https", 3), ("ssh", 1)]
-    (protocolCount dataLogLines)
+    (sort [("https", 3), ("ssh", 1)])
+    (sort $ protocolCount dataLogLines)
 
 test_identifyRefAdvertisement_SSH = H.assertEqual
     "Should identify an SSH based ref advertisement correctly"
@@ -276,12 +290,14 @@ tests =
         ,testCase "parser/parse classify log line" test_classifyRefAdv
         ,testCase "parser/parse protocol (https)" test_logLineParseProtocol
         ,testCase "parser/parse protocol (ssh)" test_logLineParseProtocolSsh
+        ,testCase "parser/parse protocol (ssh - changed log format)" test_logLineParseProtocolSsh2
         ,testCase "parser/parse request id" test_logLineParseRequestId
         ,testCase "parser/parse duration" test_logLineParseDuration
         ,testCase "parser/parse duration - Nothing" test_logLineParseDurationNothing
         ,testCase "parser/parse action" test_logLineParseAction
         ,testCase "parser/parse details" test_logLineParseDetails
         ,testCase "parser/parse labels" test_logLineParseLabels
+        ,testCase "parser/parse labels (changed log format)" test_logLineParseLabelsChangedLogFormat
         ,testCase "parser/parse request counter" test_logLineParseRequestIdCounter
         ,testCase "parser/parse request concurrent requests" test_logLineParseRequestIdConcurrent
         ,testCase "parser/parse log entry date" test_parseLogEntryDate
