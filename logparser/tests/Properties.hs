@@ -147,19 +147,7 @@ dataLogLines = [
     ,"63.246.22.196,172.16.3.45 | ssh | i2112x4x2 | - | 2012-08-23 17:48:20,505 | git-upload-pack '/CONF/teamcal.git' | \"\" \"git/1.7.4.1\" | - | - | - | "]
 
 
-test_plotDataConcurrentConn = H.assertEqual
-    "Should aggregate the max connection per minute"
-    [
-      (DateValuePair (LogDate 2012 8 22 18 32 55 300) 10),
-      (DateValuePair (LogDate 2012 8 22 20 28 04 864) 1),
-      (DateValuePair (LogDate 2012 8 22 21 7 11 798) 4),
-      (DateValuePair (LogDate 2012 8 22 23 59 59 460) 5),
-      (DateValuePair (LogDate 2012 8 23 17 44 20 123) 4),
-      (DateValuePair (LogDate 2012 8 23 17 48 20 505) 2)
-    ]
-    (plotDataConcurrentConnMinute dataLogLines)
-
-test_plotDataConcurrentConnHour = H.assertEqual
+test_concurrentConnections = H.assertEqual
     "Should aggregate the max connection per hour"
     [
       (DateValuePair (LogDate 2012 8 22 18 32 55 300) 10),
@@ -168,7 +156,7 @@ test_plotDataConcurrentConnHour = H.assertEqual
       (DateValuePair (LogDate 2012 8 22 23 59 59 460) 5),
       (DateValuePair (LogDate 2012 8 23 17 48 20 505) 4)
     ]
-    (plotDataConcurrentConnHour dataLogLines)
+    (concurrentConnections dataLogLines)
 
 -- | Test maxConcurrent
 test_maxConcurrent = H.assertEqual
@@ -269,8 +257,7 @@ tests =
       [ --testProperty "analyser/countLines" prop_countLines
         testCase "analyser/maxConcurrent" test_maxConcurrent
         ,testCase "analyser/protocolCount" test_protocolCount
-        ,testCase "analyser/dataConcurrentConn logDateEqMin" test_plotDataConcurrentConn
-        ,testCase "analyser/dataConcurrentConn logDateEqHour" test_plotDataConcurrentConnHour
+        ,testCase "analyser/dataConcurrentConn logDateEqHour" test_concurrentConnections
         ,testCase "analyser/isRefAdvertisement ssh" test_identifyRefAdvertisement_SSH
         ,testCase "analyser/isRefAdvertisement ignore incoming ssh" test_identifyRefAdvertisement_SSHIncoming
         ,testCase "analyser/isRefAdvertisement require authenticated ssh" test_identifyRefAdvertisement_SSHAuthenticated

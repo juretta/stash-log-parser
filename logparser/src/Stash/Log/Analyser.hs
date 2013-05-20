@@ -7,8 +7,7 @@ module Stash.Log.Analyser
 , ProtocolStats(..)
 , DateValuePair(..)
 , maxConcurrent
-, plotDataConcurrentConnMinute
-, plotDataConcurrentConnHour
+, concurrentConnections
 , protocolStatsByHour
 , showLines
 ) where
@@ -18,7 +17,7 @@ import Data.List (foldl', groupBy)
 import Data.Function (on)
 import Text.Printf (printf)
 import Stash.Log.Parser
-import Stash.Log.Common (logDateEqHour, logDateEqMin, isSsh, isHttp)
+import Stash.Log.Common (logDateEqHour, isSsh, isHttp)
 
 data DateValuePair = DateValuePair {
      getLogDate     :: !LogDate
@@ -53,11 +52,8 @@ maxConcurrent = countLinesWith (\x acc -> let conn = getConcurrentRequests $ get
 -- 2012-08-22 18:32:08,505 4
 -- ...
 -- Should be aggregated on a minute/hour level with the max num per unit
-plotDataConcurrentConnMinute :: Input -> [DateValuePair]
-plotDataConcurrentConnMinute = dataConcurrentConn logDateEqMin
-
-plotDataConcurrentConnHour :: Input -> [DateValuePair]
-plotDataConcurrentConnHour = dataConcurrentConn logDateEqHour
+concurrentConnections :: Input -> [DateValuePair]
+concurrentConnections = dataConcurrentConn logDateEqHour
 
 dataConcurrentConn :: (LogDate -> LogDate -> Bool) -> Input -> [DateValuePair]
 dataConcurrentConn eqf inxs = reverse $ uncurry (++) res

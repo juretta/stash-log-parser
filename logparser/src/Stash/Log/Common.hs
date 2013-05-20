@@ -2,7 +2,6 @@
 
 module Stash.Log.Common
 ( logDateEqHour
-, logDateEqMin
 , isSsh
 , isHttp
 ) where
@@ -15,10 +14,6 @@ logDateEqHour a b = getYear a   == getYear b &&
                 getMonth a      == getMonth b &&
                 getDay a        == getDay b &&
                 getHour a       == getHour b
-
-logDateEqMin :: LogDate -> LogDate -> Bool
-logDateEqMin a b = logDateEqHour a b &&
-                getMinute a == getMinute b
 
 isSsh :: LogLine -> Bool
 isSsh logLine = getProtocol logLine == "ssh"

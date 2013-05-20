@@ -70,7 +70,7 @@ mode = cmdArgsMode $ modes [maxConn, countRequests, gitOperations, gitDurations,
 
 
 run :: LogParser -> IO ()
-run (MaxConn files')                     = stream plotDataConcurrentConnHour printPlotDataConcurrentConn newRunConfig "printPlotDataConcurrentConn" files'
+run (MaxConn files')                     = stream concurrentConnections printPlotDataConcurrentConn newRunConfig "printPlotDataConcurrentConn" files'
 run (CountRequests files')               = stream countRequestLines print newRunConfig "countRequestLines" files'
 run (GitOperations files' progressive')  = stream analyseGitOperations printPlotDataGitOps (RunConfig progressive') "printPlotDataGitOps" files'
 run (GitDurations files' progressive')   = stream gitRequestDuration printGitRequestDurations (RunConfig progressive') "gitRequestDuration" files'
