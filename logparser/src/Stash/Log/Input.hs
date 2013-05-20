@@ -3,12 +3,12 @@
 module Stash.Log.Input
 ( sortLogFiles
 , readFiles
-, FileInfo(..)
 , extractFileInfo
 , isFileNewer
 , filterLastDay
 , dropUntilDate
 , readLogFiles
+, FileInfo(..)
 , RunConfig(..)
 , newRunConfig
 ) where
@@ -27,7 +27,6 @@ import Data.Time.Clock
 import Data.Time.Calendar
 import Text.Printf (printf)
 import System.Directory (renameFile, doesFileExist)
-import Debug.Trace
 
 data FileInfo = FileInfo {
      year       :: String
@@ -84,8 +83,7 @@ toLines files = liftM L.lines $ readFiles files
 -- | Read the list of files and turn them into a lazy ByteString. The input files will be
 -- filtered using the function (FilePath -> Bool)
 readFiles :: [FilePath] -> IO L.ByteString
-readFiles files = trace ("filteredFiles: " ++ show filteredFiles)  fmap L.concat . mapM readCompressedOrUncompressed $ filteredFiles
-            where filteredFiles = sortLogFiles files
+readFiles files = fmap L.concat . mapM readCompressedOrUncompressed $ sortLogFiles files
 
 filterLastDay :: [FilePath] -> [FilePath]
 filterLastDay []    = []
@@ -127,7 +125,7 @@ readLogFiles cfg key path = do
             updatedConfig   = M.insert key now' conf
         content             <- toLines (if progressive && isJust date then dropUntilDate (fromJust date) $ filterLastDay path else path)
         _                   <- saveConfig updatedConfig
-        return $ trace ("date: " ++ show date ++ " key: " ++ key ++ " now: " ++ now') content
+        return content
         where
             configFile          = "logparser.state"
             temp                = configFile ++ ".tmp"
