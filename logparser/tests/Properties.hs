@@ -158,12 +158,6 @@ test_concurrentConnections = H.assertEqual
     ]
     (concurrentConnections dataLogLines)
 
--- | Test maxConcurrent
-test_maxConcurrent = H.assertEqual
-    "Should return the correct number of concurrent requests"
-    10
-    (maxConcurrent dataLogLines)
-
 test_protocolCount = H.assertEqual
     "Should count the protocol correctly"
     (sort [("https", 3), ("ssh", 1)])
@@ -255,8 +249,7 @@ tests :: [Test]
 tests =
     [ testGroup "analyser"
       [ --testProperty "analyser/countLines" prop_countLines
-        testCase "analyser/maxConcurrent" test_maxConcurrent
-        ,testCase "analyser/protocolCount" test_protocolCount
+         testCase "analyser/protocolCount" test_protocolCount
         ,testCase "analyser/dataConcurrentConn logDateEqHour" test_concurrentConnections
         ,testCase "analyser/isRefAdvertisement ssh" test_identifyRefAdvertisement_SSH
         ,testCase "analyser/isRefAdvertisement ignore incoming ssh" test_identifyRefAdvertisement_SSHIncoming

@@ -6,7 +6,6 @@ module Stash.Log.Analyser
 , Input
 , ProtocolStats(..)
 , DateValuePair(..)
-, maxConcurrent
 , concurrentConnections
 , protocolStatsByHour
 , showLines
@@ -37,12 +36,8 @@ countLines input = toInteger $ L.count '\n' input
 
 -- | Count the number of lines marked as incoming (aka request)
 countRequestLines :: Input -> Integer
-countRequestLines = countLinesWith (\x acc -> let rid = getRequestId x
-                                              in if isIncoming rid then acc + 1 else acc)
+countRequestLines = countLinesWith (\x acc -> if isIncoming $ getRequestId x then succ acc else acc)
 
-maxConcurrent:: Input -> Integer
-maxConcurrent = countLinesWith (\x acc -> let conn = getConcurrentRequests $ getRequestId x
-                                          in if conn >= acc then conn else acc)
 
 -- The concurrent connection data needs to be aggregated.
 -- Example
