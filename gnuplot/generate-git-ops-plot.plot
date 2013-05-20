@@ -35,15 +35,6 @@ plot    "plot-git-ops" using 1:5 with lines title "push", \
 
 # ===================================================================================
 
-set output "git-ops-caching-fetch.png"
-set title "Git operations per hour (cache hit/miss)"
-
-plot    "plot-git-ops" using 1:3  with lines title "fetch", \
-        "plot-git-ops" using 1:8  with lines title "fetch (hit)", \
-        "plot-git-ops" using 1:13 with lines title "fetch (miss)"
-
-# ===================================================================================
-
 set output "git-ops-caching.png"
 plot    "plot-git-ops" using 1:7  with lines title "clone (hit)", \
         "plot-git-ops" using 1:9  with lines title "shallow clone (hit)", \
