@@ -53,11 +53,9 @@ maxConcurrent = countLinesWith (\x acc -> let conn = getConcurrentRequests $ get
 -- ...
 -- Should be aggregated on a minute/hour level with the max num per unit
 concurrentConnections :: Input -> [DateValuePair]
-concurrentConnections = dataConcurrentConn logDateEqHour
-
-dataConcurrentConn :: (LogDate -> LogDate -> Bool) -> Input -> [DateValuePair]
-dataConcurrentConn eqf inxs = reverse $ uncurry (++) res
+concurrentConnections inxs = reverse $ uncurry (++) res
         where
+            eqf           = logDateEqHour
             f acc logLine =
                     let conn = getConcurrentRequests $ getRequestId logLine
                         dateTime = getDate logLine
