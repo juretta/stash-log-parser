@@ -57,7 +57,7 @@ The `gitOperations` command aggregates the number of  `clone`,  `fetch`, `shallo
 The `gitDurations` command shows the duration of git operations (for the same set of git operations mentioned above).
 The output of this command looks like this:
 
-    $> logparser cloneDurations ../data/stash-prod-access-log/atlassian-stash-access-2012-12-10.0.log
+    $> logparser gitDurations ../data/stash-prod-access-log/atlassian-stash-access-2012-12-10.0.log
     # Date | Clone duration (cache hit) | Clone duration (cache miss) | Fetch (hit) | Fetch (miss) | Shallow Clone (hit) | Shallow Clone (miss) | Push (hit) | Push (miss) | Ref adv (hit) | Ref adv (miss) | Client IP | Username 
     2012-12-10 00:00:00|0|1848|0|0|0|0|0|0|0|0|172.16.1.187|klaus tester
     2012-12-10 00:00:00|0|0|0|435|0|0|0|0|0|0|63.246.22.196|bamboo_user
