@@ -1,15 +1,14 @@
 #!/bin/bash
 
 set -e
-set -x
 set -u
 
 rm -f *.png
 
 
 # Ensure that 'logparser' is in the PATH (e.g. run rebuild.sh or 'cabal copy')
-DATE=${1:-`date "+%Y-%m"`}
-LOG_FILE=${2:-"../access-logs/atlassian-stash-access-${DATE}*"}
+DATE=`date "+%Y-%m"`
+LOG_FILE=${1:-"../access-logs/atlassian-stash-access-${DATE}*"}
 
 export GNUPLOT_LIB="gnuplot:."
 
