@@ -42,7 +42,7 @@ task :package => :build do
     mkdir bin_dir
     cp ARTIFACT, bin_dir
     cp_r "../gnuplot", package_dir
-    cp Dir["../*.sh"], package_dir
+    cp Dir["../regenerate-graphs.sh"], package_dir
     sysinfo = SysInfo.new
     `tar zfc logparser-#{sysinfo.impl}-#{sysinfo.arch}-#{version}.tar.gz logparser`
   end
