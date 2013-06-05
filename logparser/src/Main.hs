@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
 module Main where
 
+import System.Environment (getArgs, withArgs)
 import Stash.Log.Analyser hiding (ProtocolStats)
 import Stash.Log.GitOpsAnalyser
 import Stash.Log.Output
@@ -83,5 +84,7 @@ stream analyze output runConfig name' files' = output =<< liftM analyze (readLog
 
 main :: IO ()
 main = do
-    config <- cmdArgsRun mode
+    options <- getArgs
+    -- We need arguments so if there are no arguments given, invoke the help command
+    config <- (if null options then withArgs ["--help"] else id) $ cmdArgsRun mode
     run config
