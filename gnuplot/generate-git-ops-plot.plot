@@ -1,19 +1,10 @@
-# 2012-08-22 18:32:08 6
-set datafile separator "|"
-set terminal png size 1400,1000
-set xdata time
-set timefmt "%Y-%m-%d %H"
-set yrange [0:*]
+load "shared.plot"
 
-set grid
-set xlabel "Date"
-set ylabel "Git operations"
-set format x "%d %b"
-set key left top reverse Left
 
-# ===================================================================================
-
+# ========================================
 set output "git-ops.png"
+
+# ========================================
 set title "Git operations per hour (stacked)"
 #  0: Date
 #  1-6: clone, fetch, shallow clone, push, ref advertisement (sum cache hit & cache miss)
@@ -24,8 +15,8 @@ plot    "plot-git-ops" using 1:($2+$3+$4+$5) with filledcurves x1 lt rgb "#80522
         "plot-git-ops" using 1:($2+$3)       with filledcurves x1 lt rgb "#DED9D9" title "fetch", \
         "plot-git-ops" using 1:2             with filledcurves x1 lt rgb "#253B57" title "clone"
 
-# ===================================================================================
-#
+# ========================================
+
 set output "git-ops-lines.png"
 set title "Git operations per hour"
 plot    "plot-git-ops" using 1:5 with lines title "push", \

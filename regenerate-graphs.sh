@@ -11,6 +11,8 @@ rm -f *.png
 DATE=${1:-`date "+%Y-%m"`}
 LOG_FILE=${2:-"../access-logs/atlassian-stash-access-${DATE}*"}
 
+export GNUPLOT_LIB="gnuplot:."
+
 time logparser gitOperations ${LOG_FILE} +RTS -sstderr > plot-git-ops
 gnuplot < gnuplot/generate-git-ops-plot.plot
 
