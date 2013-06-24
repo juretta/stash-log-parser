@@ -26,3 +26,6 @@ gnuplot < gnuplot/generate-max-conn-plot.plot
 
 time logparser protocolStats ${LOG_FILE} > protocol-stats
 gnuplot < gnuplot/generate-git-protocol.plot
+
+time logparser repositoryStats ${LOG_FILE} +RTS -sstderr > repository-stats.dat
+gnuplot < gnuplot/repository-stats.plot
