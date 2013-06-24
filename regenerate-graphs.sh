@@ -15,16 +15,16 @@ fi
 
 export GNUPLOT_LIB="gnuplot:."
 
-time logparser gitOperations ${LOG_FILE} +RTS -sstderr > plot-git-ops
+time logparser gitOperations ${LOG_FILE} +RTS -sstderr > plot-git-ops.dat
 gnuplot < gnuplot/generate-git-ops-plot.plot
 
-time logparser gitDurations ${LOG_FILE} +RTS -sstderr > clone-duration
+time logparser gitDurations ${LOG_FILE} +RTS -sstderr > clone-duration.dat
 gnuplot < gnuplot/generate-git-durations.plot
 
-time logparser maxConn ${LOG_FILE} +RTS -sstderr > plot-all
+time logparser maxConn ${LOG_FILE} +RTS -sstderr > plot-all.dat
 gnuplot < gnuplot/generate-max-conn-plot.plot
 
-time logparser protocolStats ${LOG_FILE} > protocol-stats
+time logparser protocolStats ${LOG_FILE} +RTS -sstderr > protocol-stats.dat
 gnuplot < gnuplot/generate-git-protocol.plot
 
 time logparser repositoryStats ${LOG_FILE} +RTS -sstderr > repository-stats.dat

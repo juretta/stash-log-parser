@@ -15,23 +15,23 @@ set multiplot layout 3, 1 title
 # Clone duration (cache hit) | Clone duration (cache miss) |
 # Fetch (hit) | Fetch (miss) | Shallow Clone (hit) | Shallow Clone (miss) |
 # Push (hit) | Push (miss) | Ref adv (hit) | Ref adv (miss) | Client IP"
-plot    "clone-duration"        using 1:($2/1000)                      with lines title "Clone (cache hit)",\
-        "clone-duration"        using 1:($3/1000)                      with lines title "Clone (cache miss)", \
-        "clone-duration"        using 1:($6/1000)                      with lines title "Shallow Clone (cache hit)", \
-        "clone-duration"        using 1:($7/1000)                      with lines title "Shallow Clone (cache miss)"
+plot    "clone-duration.dat"        using 1:($2/1000)                      with lines title "Clone (cache hit)",\
+        "clone-duration.dat"        using 1:($3/1000)                      with lines title "Clone (cache miss)", \
+        "clone-duration.dat"        using 1:($6/1000)                      with lines title "Shallow Clone (cache hit)", \
+        "clone-duration.dat"        using 1:($7/1000)                      with lines title "Shallow Clone (cache miss)"
 
 unset title
 unset xlabel
-plot    "clone-duration"        using 1:($5/1000)                      with lines title "Fetch", \
-        "clone-duration"        using 1:($10/1000)                     with lines title "Rev adv. (cache hit)", \
-        "clone-duration"        using 1:($11/1000)                     with lines title "Rev adv. (cache miss)"
+plot    "clone-duration.dat"        using 1:($5/1000)                      with lines title "Fetch", \
+        "clone-duration.dat"        using 1:($10/1000)                     with lines title "Rev adv. (cache hit)", \
+        "clone-duration.dat"        using 1:($11/1000)                     with lines title "Rev adv. (cache miss)"
 
-plot    "clone-duration"        using 1:($9/1000)                      with lines title "Push"
+plot    "clone-duration.dat"        using 1:($9/1000)                      with lines title "Push"
 
 
 unset multiplot
 set output "git-clone-duration-distribution.png"
 
 set title "Distribution of git clone operations"
-plot    "clone-duration"        using 1:(($2+$3)/1000)                      with points pointtype 6 title "Clone",\
-        "clone-duration"        using 1:(($6+$7)/1000)                      with points pointtype 6 title "Shallow Clone"
+plot    "clone-duration.dat"        using 1:(($2+$3)/1000)                      with points pointtype 6 title "Clone",\
+        "clone-duration.dat"        using 1:(($6+$7)/1000)                      with points pointtype 6 title "Shallow Clone"
