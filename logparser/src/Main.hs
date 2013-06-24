@@ -3,7 +3,7 @@ module Main where
 
 import System.Environment (getArgs, withArgs)
 import Stash.Log.Analyser hiding (ProtocolStats)
-import Stash.Log.GitOpsAnalyser
+import qualified Stash.Log.GitOpsAnalyser as G
 import Stash.Log.Output
 import Stash.Log.Input
 import Control.Monad (liftM)
@@ -21,13 +21,14 @@ appVersion = "1.12"
 appShortDesc :: String
 appShortDesc = "Logparser for the Atlassian Stash access logs"
 
-data LogParser = MaxConn        {files :: [FilePath]}
-                | CountRequests {files :: [FilePath]}
-                | GitOperations {files :: [FilePath], progressive :: Bool}
-                | GitDurations  {files :: [FilePath], progressive :: Bool}
-                | ProtocolStats {files :: [FilePath]}
-                | Count         {files :: [FilePath]}
-                | DebugParser   {files :: [FilePath], progressive :: Bool}
+data LogParser = MaxConn            {files :: [FilePath]}
+                | CountRequests     {files :: [FilePath]}
+                | GitOperations     {files :: [FilePath], progressive :: Bool}
+                | GitDurations      {files :: [FilePath], progressive :: Bool}
+                | ProtocolStats     {files :: [FilePath]}
+                | RepositoryStats   {files :: [FilePath]}
+                | Count             {files :: [FilePath]}
+                | DebugParser       {files :: [FilePath], progressive :: Bool}
              deriving (Data,Typeable,Show,Eq)
 
 progressiveFlags :: Bool
@@ -54,6 +55,11 @@ protocolStats :: LogParser
 protocolStats   = ProtocolStats {files = def &= args}
                 &= name "protocolStats" &= help "Aggregate the number of git operations per hour based on the access protocol (http(s) vs. SSH)"
 
+repositoryStats :: LogParser
+repositoryStats = RepositoryStats {files = def &= args}
+                &= name "repositoryStats" &= help "Show the number of git clone \
+                    \operations per repository"
+
 count :: LogParser
 count           = Count {files = def &= args}
                 &= name "count"         &= help "Count the number of lines in the given logfile(s)"
@@ -64,7 +70,8 @@ debugParser     = DebugParser {files = def &= args, progressive = progressiveFla
 
 
 mode :: Mode (CmdArgs LogParser)
-mode = cmdArgsMode $ modes [maxConn, countRequests, gitOperations, gitDurations, protocolStats, count, debugParser]
+mode = cmdArgsMode $ modes [maxConn, countRequests, gitOperations, gitDurations, 
+                            protocolStats, repositoryStats, count, debugParser]
         &= help appShortDesc
         &= program appName &= summary (appName ++ " " ++ appVersion)
         &= verbosity
@@ -73,9 +80,10 @@ mode = cmdArgsMode $ modes [maxConn, countRequests, gitOperations, gitDurations,
 run :: LogParser -> IO ()
 run (MaxConn files')                     = stream concurrentConnections printPlotDataConcurrentConn newRunConfig "printPlotDataConcurrentConn" files'
 run (CountRequests files')               = stream countRequestLines print newRunConfig "countRequestLines" files'
-run (GitOperations files' progressive')  = stream analyseGitOperations printPlotDataGitOps (RunConfig progressive') "printPlotDataGitOps" files'
-run (GitDurations files' progressive')   = stream gitRequestDuration printGitRequestDurations (RunConfig progressive') "gitRequestDuration" files'
+run (GitOperations files' progressive')  = stream G.analyseGitOperations printPlotDataGitOps (RunConfig progressive') "printPlotDataGitOps" files'
+run (GitDurations files' progressive')   = stream G.gitRequestDuration printGitRequestDurations (RunConfig progressive') "gitRequestDuration" files'
 run (ProtocolStats files')               = stream protocolStatsByHour printProtocolData newRunConfig "printProtocolData" files'
+run (RepositoryStats files')             = stream G.repositoryStats printRepoStatsData newRunConfig "printRepoStatsData" files'
 run (Count files')                       = printCountLines countLines files'
 run (DebugParser files' progressive')    = stream showLines print (RunConfig progressive') "showLines" files'
 

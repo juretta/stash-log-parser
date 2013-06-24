@@ -4,15 +4,17 @@ module Stash.Log.GitOpsAnalyser
 ( GitOperationStats(..)
 , analyseGitOperations
 , RequestDurationStat(..)
+, RepositoryStat(..)
 , gitRequestDuration
 , isRefAdvertisement
 , protocolCount
+, repositoryStats
 ) where
 
 import qualified Data.ByteString.Char8 as S
 import qualified Data.HashMap.Strict as M
 import Data.String.Utils (split)
-import Data.List (foldl', groupBy)
+import Data.List (foldl', groupBy, sortBy)
 import Data.Maybe (isJust, mapMaybe, fromMaybe)
 import Data.Function (on)
 import Text.Printf (printf)
@@ -43,6 +45,26 @@ analyseGitOperations rawLines =
 -- | Return the duration of clone (clone and shallow clone) operations
 gitRequestDuration :: Input -> [RequestDurationStat]
 gitRequestDuration rawLines = collectRequestDurations rawLines authenticatedGitOp
+
+-- | Return the number of clone operations per repository
+
+data RepositoryStat = RepositoryStat {
+    getName             :: S.ByteString
+  , getNumberOfClones   :: Int
+} | StatUnavailable deriving (Show)
+
+repositoryStats :: Input -> [RepositoryStat]
+repositoryStats xs =
+     let gitOps     = filter (\l -> isGitOperation l && isClone l) $ parseLogLines xs
+         perRepo    = groupByRepo $ sortBy (compare `on` f) gitOps
+         sortedPerRepo = sortBy (flip compare `on` getNumberOfClones) $ map t perRepo
+     in  sortedPerRepo
+     where groupByRepo = groupBy ((==) `on` f)
+           f a         = let slug = extractRepoSlug $ getAction a
+                         in slug
+           t []             = StatUnavailable
+           t logLines@(x:_) = RepositoryStat (S.pack $ fromMaybe "n/a" $ extractRepoSlug $ getAction x) (length logLines)
+
 
 
 -- =================================================================================

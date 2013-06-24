@@ -6,6 +6,7 @@ module Stash.Log.Output
 , printPlotDataConcurrentConn
 , printPlotDataGitOps
 , printCountLines
+, printRepoStatsData
 ) where
 
 
@@ -38,6 +39,13 @@ printGitRequestDurations plotData = do
         printf "# Date | Clone duration (cache hit) | Clone duration (cache miss) | Fetch (hit) | Fetch (miss) | Shallow Clone (hit) | Shallow Clone (miss) | Push (hit) | Push (miss) | Ref adv (hit) | Ref adv (miss) | Client IP | Username \n"
         mapM_ (\(RequestDurationStat date clientIp [cm,fm,sm,pm,rm] [c,f,s,p,r] username)
                 -> printf "%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%s|%s\n" (show date) c cm f fm s sm p pm r rm clientIp (S.unpack username)) plotData
+
+printRepoStatsData :: [RepositoryStat] -> IO ()
+printRepoStatsData xs = do
+        printf "# Repository name | Number of clones \n"
+        mapM_ p xs
+    where p (RepositoryStat name num) = printf "%s|%d\n" (S.unpack name) num
+          p _                         = printf "N/A|0\n"
 
 printCountLines :: (Show a) => (L.ByteString -> a) -> [FilePath] -> IO ()
 printCountLines f path = print . f =<< readFiles path

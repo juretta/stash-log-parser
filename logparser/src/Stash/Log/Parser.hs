@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 
 module Stash.Log.Parser
 ( Action(..)
@@ -9,6 +9,7 @@ module Stash.Log.Parser
 , Input
 , parseLogLine
 , parseLogLines
+, extractRepoSlug
 , isIncoming
 , isOutgoing
 , isOutgoingLogLine
@@ -18,11 +19,11 @@ import qualified Data.Attoparsec.Lazy as AL
 import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Lazy.Char8 as L
 import qualified Data.Text as T
-import Data.Attoparsec.Char8 hiding (char, space, take)
-import Prelude hiding (takeWhile)
+import Data.Attoparsec.Char8 hiding (char, space, take, takeWhile)
 import Data.ByteString.Char8 (readInteger, readInt)
-import Data.String.Utils (split)
+import qualified Data.String.Utils as UT
 import Data.Maybe (mapMaybe)
+import Data.List (isPrefixOf)
 import Text.Printf (printf)
 
 type Input = [L.ByteString]
@@ -165,6 +166,17 @@ separator = do
 parseAction :: Parser Action
 parseAction = choice [parseSshAction, parseHttpAction]
 
+
+-- | Return the repo slug from the logged action.
+--
+-- E.g. for "GET /scm/CONF/confluence.git/info/refs HTTP/1.1" this would return:
+--      "/CONF/confluence.git"
+extractRepoSlug :: Action -> Maybe String
+extractRepoSlug Action{..} = let elems = UT.split ("/" :: String) (S.unpack getPath)
+                                 f     = takeWhile (\s -> s /= "info" && not ("git" `isPrefixOf` s)) . dropWhile (`elem` ["", "scm", "git"])
+                             in Just $ '/' : UT.join "/" (f elems)
+
+
 parseSshAction :: Parser Action
 parseSshAction = do
     method <- takeTill (== '\'')
@@ -202,7 +214,7 @@ parseLine = do
     labels_ <- logEntry
     duration <- parseDuration
     sessionId <- logEntry
-    let labels = map trim $ split "," (S.unpack labels_)
+    let labels = map trim $ UT.split "," (S.unpack labels_)
         username = if rawUsername == "-" then Nothing else Just rawUsername
     return $ LogLine remoteAddress protocol requestId username date
                     action details labels duration sessionId

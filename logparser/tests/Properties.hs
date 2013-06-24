@@ -45,6 +45,10 @@ parsedLogLine4 = parseLogLine inputLine
 parsedLogLine5 = parseLogLine inputLine
     where inputLine = "172.16.3.7 | ssh | o357x407998x2 | atlaseye_user | 2013-03-05 05:57:20,505 | SSH - git-upload-pack '/CONF/teamcal.git' | - | clone | 145 | ofq0l6 | "
 
+parsedLogLine6 = parseLogLine inputLine
+    where inputLine = "172.26.24.201,127.0.0.1 | https | o1167x35420x10 | klaus.tester | 2013-06-13 19:27:27,302 \
+    \| \"POST /scm/testlab/point-jmeter.git/git-upload-pack HTTP/1.1\" | \"\" \"git/1.7.8.2\" | clone, cache:hit | 3499 | 8wovkm | "
+
 test_parseLogEntryDate = H.assertEqual
     "Should parse the date correctly"
     (LogDate 2012 8 22 18 32 08 505)
@@ -78,6 +82,21 @@ test_logLineParseActionSsh = H.assertEqual
     "Should parse the action correctly for ssh"
     "/CONF/teamcal.git"
     (getPath $ getAction $ fromJust parsedLogLine3)
+
+test_extractActionSsh = H.assertEqual
+    "Should parse the action correctly for ssh"
+    (Just "/CONF/teamcal.git")
+    (extractRepoSlug $ getAction $ fromJust parsedLogLine3)
+
+test_extractActionHTTP = H.assertEqual
+    "Should parse the action correctly for http"
+    (Just "/ATLASSIAN/jira.git")
+    (extractRepoSlug $ getAction $ fromJust parsedLogLine)
+
+test_extractActionHTTPUploadPack = H.assertEqual
+    "Should parse the action correctly for an upload-pack operation via http"
+    (Just "/testlab/point-jmeter.git")
+    (extractRepoSlug $ getAction $ fromJust parsedLogLine6)
 
 test_classifyRefAdv = H.assertBool
     "Should identify ref advertisement"
@@ -283,5 +302,8 @@ tests =
         ,testCase "parser/parse log entry date" test_parseLogEntryDate
         ,testCase "parser/parse username (Just)" test_logLineParseUsernameAsJust
         ,testCase "parser/parse username (Nothing)" test_logLineParseUsernameAsNothing
+        ,testCase "parser/extract Action HTTP" test_extractActionHTTP
+        ,testCase "parser/extract Action HTTP (upload-pack)" test_extractActionHTTPUploadPack
+        ,testCase "parser/extract Action SSH" test_extractActionSsh
       ]
     ]

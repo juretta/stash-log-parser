@@ -51,6 +51,8 @@ executable logparser
                             cmdargs >= 0.10,
                             unordered-containers >= 0.2,
                             time,
+                            zip-conduit,
+                            HaXml,
                             directory,
                             aeson
     ghc-options:
