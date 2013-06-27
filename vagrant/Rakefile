@@ -1,0 +1,13 @@
+require 'vagrant'
+
+task :default => :build
+
+desc "Build the distribution artifacts"
+task :build do
+  env = Vagrant::Environment.new
+  env.vms.each_value do |vm|
+    raise "Must run `vagrant up`" if !vm.created?
+    raise "Must be running!" if vm.state != :running
+    vm.channel.execute("/bin/bash /vagrant/build-logparser.sh")
+  end
+end

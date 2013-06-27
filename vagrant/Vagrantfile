@@ -1,0 +1,35 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  # All Vagrant configuration is done here. The most common configuration
+  # options are documented and commented below. For a complete reference,
+  # please see the online documentation at vagrantup.com.
+
+  ## For masterless, mount your salt file root
+  config.vm.synced_folder "salt/roots/", "/srv/"
+  config.vm.synced_folder "../", "/repo/"
+
+  ## In order to use Salt as a provider, install the vagrant-salt plugin:
+  #   
+  #   vagrant plugin install vagrant-salt
+  #
+  ## Use all the defaults:
+  config.vm.provision :salt do |salt|
+    # Minion config is set to ``file_client: local`` for masterless
+    salt.minion_config = "salt/minion"
+    # Installs our example formula in "salt/roots/salt"
+    salt.run_highstate = true
+    salt.verbose = true
+  end
+
+  config.vm.define :linux_64 do |master|
+    # This was packaged from using a blank precise64 image and running salt to
+    # install the Haskell platform, then running:
+    # `vagrant package --output ubuntu-precise64-haskell-base`
+    # `vagrant box add ubuntu-precise64-haskell-base ./ubuntu-precise64-haskell-base`
+    master.vm.box = "ubuntu-precise64-haskell-base"
+  end
+
+end
+
