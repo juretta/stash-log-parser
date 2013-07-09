@@ -8,7 +8,7 @@ rescue LoadError
   exit -1
 end
 
-ARTIFACT="dist/build/logparser/logparser".freeze
+ARTIFACTS=["dist/build/logparser/logparser", "dist/build/stash-support/stash-support"].freeze
 
 desc "Clean build artifacts"
 task :clean do
@@ -29,7 +29,9 @@ task :compile do
   %w(configure build).each do |cmd|
     cabal cmd
   end
-  `strip #{ARTIFACT}`
+  ARTIFACTS.each do |file|
+    `strip #{file}`
+  end
 end
 
 desc "Build and package the logparser"
@@ -40,7 +42,9 @@ task :package => :build do
     %w(NOTICE LICENSE).each {|f| cp f, package_dir }
     bin_dir = File.join(package_dir, "bin")
     mkdir bin_dir
-    cp ARTIFACT, bin_dir
+    ARTIFACTS.each do |file|
+      cp file, bin_dir
+    end
     cp_r "../gnuplot", package_dir
     cp Dir["../regenerate-graphs.sh"], package_dir
     sysinfo = SysInfo.new
