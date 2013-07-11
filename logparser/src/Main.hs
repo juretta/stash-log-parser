@@ -2,7 +2,7 @@
 module Main where
 
 import System.Environment (getArgs, withArgs)
-import Stash.Log.Analyser hiding (ProtocolStats)
+import Stash.Log.Analyser
 import qualified Stash.Log.GitOpsAnalyser as G
 import Stash.Log.Output
 import Stash.Log.Input
@@ -70,7 +70,7 @@ debugParser     = DebugParser {files = def &= args, progressive = progressiveFla
 
 
 mode :: Mode (CmdArgs LogParser)
-mode = cmdArgsMode $ modes [maxConn, countRequests, gitOperations, gitDurations, 
+mode = cmdArgsMode $ modes [maxConn, countRequests, gitOperations, gitDurations,
                             protocolStats, repositoryStats, count, debugParser]
         &= help appShortDesc
         &= program appName &= summary (appName ++ " " ++ appVersion)
@@ -82,7 +82,7 @@ run (MaxConn files')                     = stream concurrentConnections printPlo
 run (CountRequests files')               = stream countRequestLines print newRunConfig "countRequestLines" files'
 run (GitOperations files' progressive')  = stream G.analyseGitOperations printPlotDataGitOps (RunConfig progressive') "printPlotDataGitOps" files'
 run (GitDurations files' progressive')   = stream G.gitRequestDuration printGitRequestDurations (RunConfig progressive') "gitRequestDuration" files'
-run (ProtocolStats files')               = stream protocolStatsByHour printProtocolData newRunConfig "printProtocolData" files'
+run (ProtocolStats files')               = stream G.protocolStatsByHour printProtocolData newRunConfig "printProtocolData" files'
 run (RepositoryStats files')             = stream G.repositoryStats printRepoStatsData newRunConfig "printRepoStatsData" files'
 run (Count files')                       = printCountLines countLines files'
 run (DebugParser files' progressive')    = stream showLines print (RunConfig progressive') "showLines" files'

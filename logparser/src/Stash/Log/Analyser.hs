@@ -4,19 +4,15 @@ module Stash.Log.Analyser
 ( countLines
 , countRequestLines
 , Input
-, ProtocolStats(..)
 , DateValuePair(..)
 , concurrentConnections
-, protocolStatsByHour
 , showLines
 ) where
 
 import qualified Data.ByteString.Lazy.Char8 as L
-import Data.List (foldl', groupBy)
-import Data.Function (on)
-import Text.Printf (printf)
+import Data.List (foldl')
 import Stash.Log.Parser
-import Stash.Log.Common (logDateEqHour, isSsh, isHttp)
+import Stash.Log.Common (logDateEqHour)
 
 data DateValuePair = DateValuePair {
      getLogDate     :: !LogDate
@@ -24,11 +20,7 @@ data DateValuePair = DateValuePair {
 } deriving (Show, Eq)
 
 
-data ProtocolStats = ProtocolStats {
-     getProtocolLogDate     :: !String
-    ,getSsh                 :: !Int
-    ,getHttp                :: !Int
-}
+
 
 -- | Count the number of lines in the given input file
 countLines :: L.ByteString -> Integer
@@ -62,18 +54,7 @@ concurrentConnections inxs = reverse $ uncurry (++) res
                      (_, _)      -> ([], [])
             res = foldl' f ([],[]) $ parseLogLines inxs
 
-protocolStatsByHour :: Input -> [ProtocolStats]
-protocolStatsByHour rawLines = let  groups = groupBy (logDateEqHour `on` getDate) $ parseLogLines rawLines
-                                    formatLogDate date = printf "%04d-%02d-%02d %02d" (getYear date) (getMonth date) (getDay date) (getHour date)
-                                in map (protocolStats formatLogDate) groups
 
-protocolStats :: (LogDate -> String) -> [LogLine] -> ProtocolStats
-protocolStats formatLogDate = foldl' aggregate (ProtocolStats "" 0 0)
-                        where aggregate (ProtocolStats date ssh http) logLine =
-                                    let !ssh'   = if isSsh logLine then ssh + 1 else ssh
-                                        !http'  = if isHttp logLine then http + 1 else http
-                                        !date'  = if null date then formatLogDate $ getDate logLine else date
-                                    in ProtocolStats date' ssh' http'
 
 countLinesWith :: (Num a) => (LogLine -> a -> a) -> Input -> a
 countLinesWith f = foldl' count' 0

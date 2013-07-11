@@ -165,6 +165,17 @@ dataLogLines = [
     ,"63.246.22.222,172.16.3.45 | https | i2112x2x4 | - | 2012-08-23 17:44:20,123 | \"GET /git/ATLASSIAN/jira.git/info/refs HTTP/1.1\" | \"\" \"JGit/unknown\" | - | - | - | "
     ,"63.246.22.196,172.16.3.45 | ssh | i2112x4x2 | - | 2012-08-23 17:48:20,505 | git-upload-pack '/CONF/teamcal.git' | \"\" \"git/1.7.4.1\" | - | - | - | "]
 
+protocalStatsLogLines = [
+   "151.193.220.132 | ssh | o0x341798x1 | SG0922458 | 2013-07-09 00:00:34,655 | SSH - git-upload-pack '/hd/raspberryteam.git' | - | - | - | gqkf8q | "
+  ,"151.193.220.129 | http | o0x341799x2 | - | 2013-07-09 00:00:34,758 | \"GET /login HTTP/1.1\" | \"\" \"null\" | - | - | - | "
+ , "10.136.130.153,151.193.220.131 | http | o163x349445x1 | SG0210396 | 2013-07-09 00:00:38,817 | \"GET /login HTTP/1.1\" | \"\" \"null\" | - | 46 | 1oaiaol | " 
+  ,"151.193.220.132 | ssh | o0x341798x1 | SG0922458 | 2013-07-09 00:00:34,973 | SSH - git-upload-pack '/hd/raspberryteam.git' | - | clone | 318 | gqkf8q | "
+  , "10.136.130.153,151.193.220.131 | http | i163x349445x1 | SG0210396 | 2013-07-09 00:00:35,817 | \"GET /scm/tc/tripcase-rails.git/info/refs HTTP/1.1\" | \"\" \"git/1.8.3.2\" | - | 46 | 1oaiaol | "
+  , "10.136.130.153,151.193.220.131 | http | o163x349445x1 | SG0210396 | 2013-07-09 00:00:36,817 | \"GET /scm/tc/tripcase-rails.git/info/refs HTTP/1.1\" | \"\" \"git/1.8.3.2\" | - | 46 | 1oaiaol | "
+  , "10.136.130.153,151.193.220.131 | http | o163x349445x1 | SG0210396 | 2013-07-09 00:00:37,817 | \"GET /scm/tc/tripcase-rails.git/info/refs HTTP/1.1\" | \"\" \"git/1.8.3.2\" | - | 46 | 1oaiaol | "
+  , "10.136.130.153,151.193.220.131 | http | o163x349445x1 | SG0210396 | 2013-07-09 00:00:38,817 | \"GET /scm/tc/tripcase-rails.git/info/refs HTTP/1.1\" | \"\" \"git/1.8.3.2\" | - | 46 | 1oaiaol | " ]
+
+
 
 test_concurrentConnections = H.assertEqual
     "Should aggregate the max connection per hour"
@@ -177,10 +188,16 @@ test_concurrentConnections = H.assertEqual
     ]
     (concurrentConnections dataLogLines)
 
+
 test_protocolCount = H.assertEqual
     "Should count the protocol correctly"
     (sort [("https", 3), ("ssh", 1)])
     (sort $ protocolCount dataLogLines)
+
+test_protocolCountMixedRequests = H.assertEqual
+    "Should count the protocol correctly in the presence of non-hosting HTTP requests"
+    ([(2, 3)])
+    (fmap (\(ProtocolStats _ ssh http) -> (ssh, http)) $ protocolStatsByHour protocalStatsLogLines)
 
 test_identifyRefAdvertisement_SSH = H.assertEqual
     "Should identify an SSH based ref advertisement correctly"
@@ -269,6 +286,7 @@ tests =
     [ testGroup "analyser"
       [ --testProperty "analyser/countLines" prop_countLines
          testCase "analyser/protocolCount" test_protocolCount
+        ,testCase "analyser/protocolCountMixedRequests" test_protocolCountMixedRequests
         ,testCase "analyser/dataConcurrentConn logDateEqHour" test_concurrentConnections
         ,testCase "analyser/isRefAdvertisement ssh" test_identifyRefAdvertisement_SSH
         ,testCase "analyser/isRefAdvertisement ignore incoming ssh" test_identifyRefAdvertisement_SSHIncoming

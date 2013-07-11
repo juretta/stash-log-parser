@@ -8,6 +8,8 @@ module Stash.Log.GitOpsAnalyser
 , gitRequestDuration
 , isRefAdvertisement
 , protocolCount
+, protocolStatsByHour
+, ProtocolStats(..)
 , repositoryStats
 ) where
 
@@ -35,6 +37,12 @@ data RequestDurationStat = RequestDurationStat {
    ,requestUsername             :: !S.ByteString
 }
 
+data ProtocolStats = ProtocolStats {
+     getProtocolLogDate     :: !String
+    ,getSsh                 :: !Int
+    ,getHttp                :: !Int
+}
+
 -- | Parse and aggregate the log file input into a list of hourly GitOperationStats
 analyseGitOperations :: Input -> [GitOperationStats]
 analyseGitOperations rawLines =
@@ -45,6 +53,20 @@ analyseGitOperations rawLines =
 -- | Return the duration of clone (clone and shallow clone) operations
 gitRequestDuration :: Input -> [RequestDurationStat]
 gitRequestDuration rawLines = collectRequestDurations rawLines authenticatedGitOp
+
+protocolStatsByHour :: Input -> [ProtocolStats]
+protocolStatsByHour rawLines = let  groups = groupBy (logDateEqHour `on` getDate) $ filter f $ parseLogLines rawLines
+                                    formatLogDate date = printf "%04d-%02d-%02d %02d" (getYear date) (getMonth date) (getDay date) (getHour date)
+                                in map (protocolStats formatLogDate) groups
+                            where f line = isOutgoingLogLine line && isGitOperation line
+
+protocolStats :: (LogDate -> String) -> [LogLine] -> ProtocolStats
+protocolStats formatLogDate = foldl' aggregate (ProtocolStats "" 0 0)
+                        where aggregate (ProtocolStats date ssh http) logLine =
+                                    let !ssh'   = if isSsh logLine then ssh + 1 else ssh
+                                        !http'  = if isHttp logLine then http + 1 else http
+                                        !date'  = if null date then formatLogDate $ getDate logLine else date
+                                    in ProtocolStats date' ssh' http'
 
 -- | Return the number of clone operations per repository
 
