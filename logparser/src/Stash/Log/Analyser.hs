@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Stash.Log.Analyser
 ( countLines
