@@ -165,6 +165,7 @@ dataLogLines = [
     ,"63.246.22.222,172.16.3.45 | https | i2112x2x4 | - | 2012-08-23 17:44:20,123 | \"GET /git/ATLASSIAN/jira.git/info/refs HTTP/1.1\" | \"\" \"JGit/unknown\" | - | - | - | "
     ,"63.246.22.196,172.16.3.45 | ssh | i2112x4x2 | - | 2012-08-23 17:48:20,505 | git-upload-pack '/CONF/teamcal.git' | \"\" \"git/1.7.4.1\" | - | - | - | "]
 
+protocalStatsLogLines :: [L.ByteString]
 protocalStatsLogLines = [
    "151.193.220.132 | ssh | o0x341798x1 | SG0922458 | 2013-07-09 00:00:34,655 | SSH - git-upload-pack '/hd/raspberryteam.git' | - | - | - | gqkf8q | "
   ,"151.193.220.129 | http | o0x341799x2 | - | 2013-07-09 00:00:34,758 | \"GET /login HTTP/1.1\" | \"\" \"null\" | - | - | - | "
@@ -191,12 +192,12 @@ test_concurrentConnections = H.assertEqual
 
 test_protocolCount = H.assertEqual
     "Should count the protocol correctly"
-    (sort [("https", 3), ("ssh", 1)])
-    (sort $ protocolCount dataLogLines)
+    [(1,0),(0,1),(0,2)]
+    (fmap (\(ProtocolStats _ ssh http) -> (ssh, http)) $ protocolStatsByHour dataLogLines)
 
 test_protocolCountMixedRequests = H.assertEqual
     "Should count the protocol correctly in the presence of non-hosting HTTP requests"
-    ([(2, 3)])
+    [(2, 3)]
     (fmap (\(ProtocolStats _ ssh http) -> (ssh, http)) $ protocolStatsByHour protocalStatsLogLines)
 
 test_identifyRefAdvertisement_SSH = H.assertEqual

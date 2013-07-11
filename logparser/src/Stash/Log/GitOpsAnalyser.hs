@@ -7,17 +7,15 @@ module Stash.Log.GitOpsAnalyser
 , RepositoryStat(..)
 , gitRequestDuration
 , isRefAdvertisement
-, protocolCount
 , protocolStatsByHour
 , ProtocolStats(..)
 , repositoryStats
 ) where
 
 import qualified Data.ByteString.Char8 as S
-import qualified Data.HashMap.Strict as M
 import Data.String.Utils (split)
 import Data.List (foldl', groupBy, sortBy)
-import Data.Maybe (isJust, mapMaybe, fromMaybe)
+import Data.Maybe (isJust, fromMaybe)
 import Data.Function (on)
 import Text.Printf (printf)
 import Stash.Log.Parser
@@ -130,13 +128,6 @@ summarizeGitOperations formatLogDate = foldl' aggregate emptyStats . filter isOu
                                     misses'     = zipWith id missOps misses
                                     hits'       = zipWith id hitOps hits
                                 in GitOperationStats date' misses' hits'
-
-protocolCount :: Input -> [(S.ByteString,Integer)]
-protocolCount line = M.toList $ foldl' count' M.empty (filter isOutgoingLogLine (filter isGitOperation $ mapMaybe parseLogLine line))
-        where
-            count' acc logLine = let !proto = getProtocol logLine
-                                 in M.insertWith (+) proto 1 acc
-
 
 -- =================================================================================
 --                                Predicates
