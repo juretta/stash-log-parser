@@ -3,6 +3,7 @@ load "shared.plot"
 
 # ========================================
 set output "git-ops.png"
+set ylabel "Number of ops"
 
 # ========================================
 set title "Git operations per hour (stacked)"

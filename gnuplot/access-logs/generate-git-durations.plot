@@ -9,6 +9,7 @@ set format x "%d/%m\n%H:%M"
 set timefmt "%Y-%m-%d %H:%M:%S"
 set title "Duration of git operations"
 set multiplot layout 3, 1 title
+set ylabel "Duration (seconds)"
 
 
 # Date |
