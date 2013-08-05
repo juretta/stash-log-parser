@@ -24,8 +24,8 @@ plot    "clone-duration.dat"        using 1:($2/1000)                      with 
 unset title
 unset xlabel
 plot    "clone-duration.dat"        using 1:($5/1000)                      with lines title "Fetch", \
-        "clone-duration.dat"        using 1:($10/1000)                     with lines title "Rev adv. (cache hit)", \
-        "clone-duration.dat"        using 1:($11/1000)                     with lines title "Rev adv. (cache miss)"
+        "clone-duration.dat"        using 1:($10/1000)                     with lines title "Ref adv. (cache hit)", \
+        "clone-duration.dat"        using 1:($11/1000)                     with lines title "Ref adv. (cache miss)"
 
 plot    "clone-duration.dat"        using 1:($9/1000)                      with lines title "Push"
 
