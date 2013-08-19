@@ -28,7 +28,10 @@ import Text.Printf (printf)
 
 type Input = [L.ByteString]
 
-data Action = Action {
+data Action = HttpAction {
+     getMethod       :: S.ByteString
+    ,getPath         :: S.ByteString
+} | SshAction {
      getMethod       :: S.ByteString
     ,getPath         :: S.ByteString
 } deriving (Show, Eq)
@@ -172,10 +175,10 @@ parseAction = choice [parseSshAction, parseHttpAction]
 -- E.g. for "GET /scm/CONF/confluence.git/info/refs HTTP/1.1" this would return:
 --      "/CONF/confluence.git"
 extractRepoSlug :: Action -> Maybe String
-extractRepoSlug Action{..} = let elems = UT.split ("/" :: String) (S.unpack getPath)
-                                 f     = takeWhile (\s -> s /= "info" && not ("git" `isPrefixOf` s)) . dropWhile (`elem` ["", "scm", "git"])
-                             in Just $ '/' : UT.join "/" (f elems)
-
+extractRepoSlug action =
+    let elems = UT.split ("/" :: String) (S.unpack $ getPath action)
+        f     = takeWhile (\s -> s /= "info" && not ("git" `isPrefixOf` s)) . dropWhile (`elem` ["", "scm", "git"])
+    in Just $ '/' : UT.join "/" (f elems)
 
 parseSshAction :: Parser Action
 parseSshAction = do
@@ -184,7 +187,7 @@ parseSshAction = do
     path <- takeTill (== '\'')
     single
     separator
-    return $ Action method path
+    return $ SshAction method path
 
 
 
@@ -198,7 +201,7 @@ parseHttpAction = do
     _ <- takeTill (== '"')
     quote
     separator
-    return $ Action method path
+    return $ HttpAction method path
 
 
 -- | Parse an access log line

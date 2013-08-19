@@ -49,6 +49,16 @@ parsedLogLine6 = parseLogLine inputLine
     where inputLine = "172.26.24.201,127.0.0.1 | https | o1167x35420x10 | klaus.tester | 2013-06-13 19:27:27,302 \
     \| \"POST /scm/testlab/point-jmeter.git/git-upload-pack HTTP/1.1\" | \"\" \"git/1.7.8.2\" | clone, cache:hit | 3499 | 8wovkm | "
 
+parsedLogLine7 = parseLogLine inputLine
+    where inputLine = "172.26.24.201,127.0.0.1 | https | o1167x35420x10 | klaus.tester | 2013-06-13 19:27:27,302 \
+    \| \"POST /scm/testlab/point-jmeter.git/git-receive-pack HTTP/1.1\" | \"\" \"git/1.7.8.2\" | - | 3499 | 8wovkm | "
+
+parsedLogLine8 = parseLogLine inputLine
+    where inputLine = "172.16.3.7 | ssh | o357x407998x2 | atlaseye_user | 2013-03-05 05:57:20,505 | SSH - git-receive-pack '/CONF/teamcal.git' | - | push | 145 | ofq0l6 | "
+
+parsedLogLine9 = parseLogLine inputLine
+    where inputLine = "172.16.3.7 | ssh | o357x407998x2 | atlaseye_user | 2013-03-05 05:57:20,505 | SSH - git-receive-pack '/CONF/teamcal.git' | - | - | 145 | ofq0l6 | "
+
 test_parseLogEntryDate = H.assertEqual
     "Should parse the date correctly"
     (LogDate 2012 8 22 18 32 08 505)
@@ -101,6 +111,18 @@ test_extractActionHTTPUploadPack = H.assertEqual
 test_classifyRefAdv = H.assertBool
     "Should identify ref advertisement"
     (isRefAdvertisement $ fromJust parsedLogLine)
+
+test_classifyHttpPush = H.assertBool
+    "POST to git-receive-pack is a push even with no label present"
+    (isPush $ fromJust parsedLogLine7)
+
+test_classifySshPush = H.assertBool
+    "SSH using git-receive-pack on the remote end is a push even with no label present"
+    (isPush $ fromJust parsedLogLine9)
+
+test_classifyPushWithLabel = H.assertBool
+    "Classify push with label"
+    (isPush $ fromJust parsedLogLine8)
 
 test_logLineParseDetails = H.assertEqual
     "Should parse the labels correctly"
@@ -306,6 +328,9 @@ tests =
       [ testCase "parser/parse empty String" test_logLineParserEmpty
         ,testCase "parser/parse single line" test_logLineParseSingleLine
         ,testCase "parser/parse classify log line" test_classifyRefAdv
+        ,testCase "parser/parse classify log line - HTTP push" test_classifyHttpPush
+        ,testCase "parser/parse classify log line - SSH push" test_classifySshPush
+        ,testCase "parser/parse classify log line - push label" test_classifyPushWithLabel
         ,testCase "parser/parse protocol (https)" test_logLineParseProtocol
         ,testCase "parser/parse protocol (ssh)" test_logLineParseProtocolSsh
         ,testCase "parser/parse protocol (ssh - changed log format)" test_logLineParseProtocolSsh2

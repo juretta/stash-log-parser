@@ -10,6 +10,7 @@ module Stash.Log.GitOpsAnalyser
 , protocolStatsByHour
 , ProtocolStats(..)
 , repositoryStats
+, isPush
 ) where
 
 import qualified Data.ByteString.Char8 as S
@@ -166,11 +167,11 @@ isShallowClone :: LogLine -> Bool
 isShallowClone logLine = inLabel logLine "shallow clone"
 
 isPush :: LogLine -> Bool
-isPush logLine = inLabel logLine "push" || isHttpPush
-    where isHttpPush = let action      = getAction logLine
-                           path        = getPath action
-                           method      = getMethod action
-                       in ".git/git-upload-pack" `S.isSuffixOf` path && "POST" == method
+isPush logLine = inLabel logLine "push" || isPushAction (getAction logLine)
+    where isPushAction (HttpAction method path) =
+                    ".git/git-receive-pack" `S.isSuffixOf` path && "POST" == method
+          isPushAction (SshAction method _)  =
+                    "git-receive-pack" `S.isInfixOf` method
 
 isRefs :: LogLine -> Bool
 isRefs logLine = inLabel logLine "refs"
