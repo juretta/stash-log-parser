@@ -166,7 +166,11 @@ isShallowClone :: LogLine -> Bool
 isShallowClone logLine = inLabel logLine "shallow clone"
 
 isPush :: LogLine -> Bool
-isPush logLine = inLabel logLine "push"
+isPush logLine = inLabel logLine "push" || isHttpPush
+    where isHttpPush = let action      = getAction logLine
+                           path        = getPath action
+                           method      = getMethod action
+                       in ".git/git-upload-pack" `S.isSuffixOf` path && "POST" == method
 
 isRefs :: LogLine -> Bool
 isRefs logLine = inLabel logLine "refs"
