@@ -59,6 +59,16 @@ parsedLogLine8 = parseLogLine inputLine
 parsedLogLine9 = parseLogLine inputLine
     where inputLine = "172.16.3.7 | ssh | o357x407998x2 | atlaseye_user | 2013-03-05 05:57:20,505 | SSH - git-receive-pack '/CONF/teamcal.git' | - | - | 145 | ofq0l6 | "
 
+parsedLogLineShallowNegotiation = parseLogLine inputLine
+    where inputLine = "23.23.30.99,172.24.4.5,127.0.0.1 | https | o1439x1423920x69 | bamboo_user | 2013-08-22 23:59:57,763 | \"POST /scm/JIRA/servicedesk.git/git-upload-pack HTTP/1.1\" | \"\" \"git/1.7.9.5\" | shallow negotiation, cache:hit | 70 | q09lhc |"
+
+parsedLogLineShallowCloneLabelNew = parseLogLine inputLine
+    where inputLine = "23.23.30.99,172.24.4.5,127.0.0.1 | https | o1439x1423920x69 | bamboo_user | 2013-08-22 23:59:57,763 | \"POST /scm/JIRA/servicedesk.git/git-upload-pack HTTP/1.1\" | \"\" \"git/1.7.9.5\" | shallow, clone, cache:hit | 70 | q09lhc | "
+
+parsedLogLineShallowCloneLabelOld = parseLogLine inputLine
+    where inputLine = "23.23.30.99,172.24.4.5,127.0.0.1 | https | o1439x1423920x69 | bamboo_user | 2013-08-22 23:59:57,763 | \"POST /scm/JIRA/servicedesk.git/git-upload-pack HTTP/1.1\" | \"\" \"git/1.7.9.5\" | shallow clone, cache:hit | 70 | q09lhc | "
+
+
 test_parseLogEntryDate = H.assertEqual
     "Should parse the date correctly"
     (LogDate 2012 8 22 18 32 08 505)
@@ -138,6 +148,22 @@ test_logLineParseLabelsChangedLogFormat = H.assertEqual
     "Should parse the labels correctly"
     ["clone"]
     (getLabels $ fromJust parsedLogLine5)
+
+test_logLineParseLabelsShallowCloneOld = H.assertBool
+    "Should parse the old 'shallow clone' label correctly"
+    (isShallowClone $ fromJust parsedLogLineShallowCloneLabelOld)
+
+test_logLineParseLabelsShallowCloneNew = H.assertBool
+    "Should parse the new 'shallow, clone' labels correctly"
+    (isShallowClone $ fromJust parsedLogLineShallowCloneLabelNew)
+
+test_logLineParseLabelsCloneOld = H.assertBool
+    "Should parse the old 'shallow clone' label correctly"
+    (not $ isClone $ fromJust parsedLogLineShallowCloneLabelOld)
+
+test_logLineParseLabelsCloneNew = H.assertBool
+    "Should parse the new 'shallow, clone' labels correctly"
+    (not $ isClone $ fromJust parsedLogLineShallowCloneLabelNew)
 
 test_logLineParseDuration = H.assertEqual
     "Should parse the duration correctly"
@@ -317,6 +343,10 @@ tests =
         ,testCase "analyser/isRefAdvertisement ignore clones ssh" test_identifyRefAdvertisement_SSHClone
         ,testCase "analyser/isRefAdvertisement http action" test_identifyRefAdvertisement_HttpAction
         ,testCase "analyser/isRefAdvertisement http label" test_identifyRefAdvertisement_HttpLabel
+        ,testCase "analyser/isShallowClone (shallow clone)" test_logLineParseLabelsShallowCloneOld
+        ,testCase "analyser/isShallowClone (shallow, clone)" test_logLineParseLabelsShallowCloneNew
+        ,testCase "analyser/not isClone (shallow clone)" test_logLineParseLabelsCloneNew
+        ,testCase "analyser/not isClone (shallow, clone)" test_logLineParseLabelsCloneOld
       ],
       testGroup "Files"
       [

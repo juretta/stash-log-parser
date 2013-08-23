@@ -7,6 +7,8 @@ module Stash.Log.GitOpsAnalyser
 , RepositoryStat(..)
 , gitRequestDuration
 , isRefAdvertisement
+, isClone
+, isShallowClone
 , protocolStatsByHour
 , ProtocolStats(..)
 , repositoryStats
@@ -147,37 +149,34 @@ isRefAdvertisement logLine = authenticatedGitOp logLine && isOutgoingLogLine log
                 path        = getPath action
                 method      = getMethod action
                 refAdvertisement line
-                            | isSsh line        = isRefs line || not (any (inLabel line) ["clone", "fetch", "shallow clone"])
+                            | isSsh line        = isRefs line || not (any ($ line) [isClone, isFetch, isShallowClone])
                             | isHttp line       = ".git/info/refs" `S.isSuffixOf` path && "GET" == method
                             | otherwise         = False
 
-isCacheHit :: LogLine -> Bool
-isCacheHit logLine = inLabel logLine "cache:hit"
+isCacheHit, isCacheMiss, isFetch, isClone, isShallowClone, isPush, isRefs, isShallow :: LogLine -> Bool
+isCacheHit = inLabel "cache:hit"
 
-isCacheMiss :: LogLine -> Bool
-isCacheMiss = not . flip inLabel "cache:hit" -- treat as cache miss if the cache:* label is missing
+isCacheMiss = not . inLabel "cache:hit" -- treat as cache miss if the cache:* label is missing
 
-isFetch :: LogLine -> Bool
-isFetch logLine = inLabel logLine "fetch" && not (inLabel logLine "clone" || inLabel logLine "shallow clone")
+isFetch logLine = inLabel "fetch" logLine && not (isClone logLine || isShallowClone logLine)
 
-isClone :: LogLine -> Bool
-isClone logLine = inLabel logLine "clone"
+isClone line = inLabel "clone" line && not (isShallow line)
 
-isShallowClone :: LogLine -> Bool
-isShallowClone logLine = inLabel logLine "shallow clone"
+isShallowClone logLine = inLabel "shallow clone" logLine || (
+            inLabel "clone" logLine && isShallow logLine)
 
-isPush :: LogLine -> Bool
-isPush logLine = inLabel logLine "push" || isPushAction (getAction logLine)
+isPush logLine = inLabel "push" logLine || isPushAction (getAction logLine)
     where isPushAction (HttpAction method path) =
                     ".git/git-receive-pack" `S.isSuffixOf` path && "POST" == method
           isPushAction (SshAction method _)  =
                     "git-receive-pack" `S.isInfixOf` method
 
-isRefs :: LogLine -> Bool
-isRefs logLine = inLabel logLine "refs"
+isRefs = inLabel "refs"
 
-inLabel :: LogLine -> String -> Bool
-inLabel logLine name =  let labels = getLabels logLine
+isShallow = inLabel "shallow"
+
+inLabel :: String -> LogLine -> Bool
+inLabel name logLine =  let labels = getLabels logLine
                         in name `elem` labels
 
 cachedOperation :: (LogLine -> Bool) -> LogLine -> Bool
