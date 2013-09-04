@@ -30,7 +30,6 @@ mode :: Mode (CmdArgs SupportZip)
 mode = cmdArgsMode $ modes [repositoryInformation]
         &= help appShortDesc
         &= program appName &= summary (appName ++ " " ++ appVersion)
-        &= verbosity
 
 
 run :: SupportZip -> IO ()
