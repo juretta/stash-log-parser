@@ -16,13 +16,14 @@ module Stash.Log.GitOpsAnalyser
 ) where
 
 import qualified Data.ByteString.Char8 as S
-import Data.String.Utils (split)
-import Data.List (foldl', groupBy, sortBy)
-import Data.Maybe (isJust, fromMaybe)
-import Data.Function (on)
-import Text.Printf (printf)
-import Stash.Log.Parser
-import Stash.Log.Common (logDateEqHour, isSsh, isHttp)
+import           Data.String.Utils     (split)
+import           Data.List             (foldl', groupBy, sortBy)
+import           Data.Maybe            (isJust, fromMaybe)
+import           Data.Function         (on)
+import           Text.Printf           (printf)
+import           Stash.Log.Parser
+import           Stash.Log.Common      (logDateEqHour, isSsh, isHttp)
+import           Data.Char             (toLower)
 
 data GitOperationStats = GitOperationStats {
      getOpStatDate              :: !String
@@ -78,15 +79,15 @@ data RepositoryStat = RepositoryStat {
 
 repositoryStats :: Input -> [RepositoryStat]
 repositoryStats xs =
-     let gitOps     = filter (\l -> isGitOperation l && isClone l) $ parseLogLines xs
-         perRepo    = groupByRepo $ sortBy (compare `on` f) gitOps
+     let gitOps        = filter (\l -> isGitOperation l && isClone l) $ parseLogLines xs
+         perRepo       = groupByRepo $ sortBy (compare `on` repoSlug) gitOps
          sortedPerRepo = sortBy (flip compare `on` getNumberOfClones) $ map t perRepo
      in  sortedPerRepo
-     where groupByRepo = groupBy ((==) `on` f)
-           f a         = let slug = extractRepoSlug $ getAction a
-                         in slug
+     where groupByRepo = groupBy ((==) `on` repoSlug)
+           repoSlug    = lower . extractRepoSlug . getAction
+           lower       = fmap (map toLower)
            t []             = StatUnavailable
-           t logLines@(x:_) = RepositoryStat (S.pack $ fromMaybe "n/a" $ extractRepoSlug $ getAction x) (length logLines)
+           t logLines@(x:_) = RepositoryStat (S.pack $ fromMaybe "n/a" (repoSlug x)) (length logLines)
 
 
 
