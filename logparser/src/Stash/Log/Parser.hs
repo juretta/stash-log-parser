@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Stash.Log.Parser
 ( Action(..)
@@ -9,31 +9,26 @@ module Stash.Log.Parser
 , Input
 , parseLogLine
 , parseLogLines
-, extractRepoSlug
-, isIncoming
-, isOutgoing
-, isOutgoingLogLine
 ) where
 
-import qualified Data.Attoparsec.Lazy         as AL
-import qualified Data.ByteString.Char8        as S
-import qualified Data.ByteString.Lazy.Char8   as L
-import qualified Data.Text                    as T
-import qualified Data.String.Utils            as UT
-import           Data.Attoparsec.Char8 hiding (char, space, take, takeWhile)
-import           Data.ByteString.Char8        (readInteger, readInt)
-import           Data.Maybe                   (mapMaybe)
-import           Data.List                    (isPrefixOf)
-import           Text.Printf                  (printf)
+import           Data.Attoparsec.Char8      hiding (char, space, take, takeWhile)
+import qualified Data.Attoparsec.Lazy       as AL
+import           Data.ByteString.Char8      (readInt, readInteger)
+import qualified Data.ByteString.Char8      as S
+import qualified Data.ByteString.Lazy.Char8 as L
+import           Data.Maybe                 (mapMaybe)
+import qualified Data.String.Utils          as UT
+import qualified Data.Text                  as T
+import           Text.Printf                (printf)
 
 type Input = [L.ByteString]
 
 data Action = HttpAction {
-     getMethod       :: S.ByteString
-    ,getPath         :: S.ByteString
+    getMethod :: S.ByteString
+  , getPath   :: S.ByteString
 } | SshAction {
-     getMethod       :: S.ByteString
-    ,getPath         :: S.ByteString
+    getMethod :: S.ByteString
+  , getPath   :: S.ByteString
 } deriving (Show, Eq)
 
 data InOurOut = In | Out deriving (Show, Eq)
@@ -45,26 +40,26 @@ data RequestId = RequestId {
 } deriving (Show, Eq)
 
 data LogLine = LogLine {
-     getRemoteAdress        :: S.ByteString
-    ,getProtocol            :: S.ByteString
-    ,getRequestId           :: RequestId
-    ,getUsername            :: Maybe S.ByteString
-    ,getDate                :: LogDate
-    ,getAction              :: Action
-    ,getDetails             :: S.ByteString
-    ,getLabels              :: [String]
-    ,getRequestDuration     :: Maybe Int
-    ,getSessionId           :: S.ByteString
+    getRemoteAdress    :: S.ByteString
+  , getProtocol        :: S.ByteString
+  , getRequestId       :: RequestId
+  , getUsername        :: Maybe S.ByteString
+  , getDate            :: LogDate
+  , getAction          :: Action
+  , getDetails         :: S.ByteString
+  , getLabels          :: [String]
+  , getRequestDuration :: Maybe Int
+  , getSessionId       :: S.ByteString
 } deriving (Show, Eq)
 
 data LogDate = LogDate {
-    getYear         :: !Int
-    ,getMonth       :: !Int
-    ,getDay         :: !Int
-    ,getHour        :: !Int
-    ,getMinute      :: !Int
-    ,getSeconds     :: !Int
-    ,getMillis      :: !Int
+    getYear    :: !Int
+  , getMonth   :: !Int
+  , getDay     :: !Int
+  , getHour    :: !Int
+  , getMinute  :: !Int
+  , getSeconds :: !Int
+  , getMillis  :: !Int
 } deriving (Eq)
 
 instance Show LogDate where
@@ -81,18 +76,7 @@ parseLogLines = mapMaybe parseLogLine
 
 -- | Parse a single log line.
 parseLogLine :: L.ByteString -> Maybe LogLine
-parseLogLine line = AL.maybeResult $ AL.parse parseLine line
-
--- | Check whether this is a log line for the request ("incoming")
-isIncoming :: RequestId -> Bool
-isIncoming rid = getInOrOut rid == 'i'
-
--- | Check whether this is a log line for a response ("outgoing")
-isOutgoing :: RequestId -> Bool
-isOutgoing rid = getInOrOut rid == 'o'
-
-isOutgoingLogLine :: LogLine -> Bool
-isOutgoingLogLine = isOutgoing . getRequestId
+parseLogLine = AL.maybeResult . AL.parse parseLine
 
 -- =================================================================================
 
@@ -170,15 +154,7 @@ parseAction :: Parser Action
 parseAction = choice [parseSshAction, parseHttpAction]
 
 
--- | Return the repo slug from the logged action.
---
--- E.g. for "GET /scm/CONF/confluence.git/info/refs HTTP/1.1" this would return:
---      "/CONF/confluence.git"
-extractRepoSlug :: Action -> Maybe String
-extractRepoSlug action =
-    let elems = UT.split ("/" :: String) (S.unpack $ getPath action)
-        f     = takeWhile (\s -> s /= "info" && not ("git" `isPrefixOf` s)) . dropWhile (`elem` ["", "scm", "git"])
-    in Just $ '/' : UT.join "/" (f elems)
+
 
 parseSshAction :: Parser Action
 parseSshAction = do

@@ -1,48 +1,55 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns #-}
+{-# LANGUAGE BangPatterns      #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Stash.Log.GitOpsAnalyser
-( GitOperationStats(..)
-, analyseGitOperations
+(
+  GitOperationStats(..)
 , RequestDurationStat(..)
 , RepositoryStat(..)
+, ProtocolStats(..)
+
+, analyseGitOperations
 , gitRequestDuration
+, protocolStatsByHour
+, repositoryStats
+
+
+ -- Exported for testing
 , isRefAdvertisement
 , isClone
 , isShallowClone
-, protocolStatsByHour
-, ProtocolStats(..)
-, repositoryStats
 , isPush
+, extractRepoSlug
 ) where
 
 import qualified Data.ByteString.Char8 as S
-import           Data.String.Utils     (split)
-import           Data.List             (foldl', groupBy, sortBy)
-import           Data.Maybe            (isJust, fromMaybe)
-import           Data.Function         (on)
-import           Text.Printf           (printf)
-import           Stash.Log.Parser
-import           Stash.Log.Common      (logDateEqHour, isSsh, isHttp)
 import           Data.Char             (toLower)
+import           Data.Function         (on)
+import           Data.List             (foldl', groupBy, isPrefixOf, sortBy)
+import           Data.Maybe            (fromMaybe, isJust)
+import qualified Data.String.Utils     as UT
+import           Stash.Log.Common      (logDateEqHour)
+import           Stash.Log.Parser
+import           Text.Printf           (printf)
 
 data GitOperationStats = GitOperationStats {
-     getOpStatDate              :: !String
-    ,cacheMisses                :: ![Int] -- clone, fetch, shallow clone, push, ref advertisement
-    ,cacheHits                  :: ![Int]
+    getOpStatDate :: !String
+  , cacheMisses   :: ![Int] -- clone, fetch, shallow clone, push, ref advertisement
+  , cacheHits     :: ![Int]
 }
 
 data RequestDurationStat = RequestDurationStat {
-    getDurationDate             :: !LogDate
-   ,getClientIp                 :: !String
-   ,cacheMissDurations          :: ![Int]
-   ,cacheHitDurations           :: ![Int] -- clone, fetch, shallow clone, push, ref advertisement
-   ,requestUsername             :: !S.ByteString
+    getDurationDate    :: !LogDate
+  , getClientIp        :: !String
+  , cacheMissDurations :: ![Int]
+  , cacheHitDurations  :: ![Int] -- clone, fetch, shallow clone, push, ref advertisement
+  , requestUsername    :: !S.ByteString
 }
 
 data ProtocolStats = ProtocolStats {
-     getProtocolLogDate     :: !String
-    ,getSsh                 :: !Int
-    ,getHttp                :: !Int
+    getProtocolLogDate :: !String
+  , getSsh             :: !Int
+  , getHttp            :: !Int
 }
 
 -- | Parse and aggregate the log file input into a list of hourly GitOperationStats
@@ -54,7 +61,7 @@ analyseGitOperations rawLines =
 
 -- | Return the duration of clone (clone and shallow clone) operations
 gitRequestDuration :: Input -> [RequestDurationStat]
-gitRequestDuration rawLines = collectRequestDurations rawLines authenticatedGitOp
+gitRequestDuration = flip collectRequestDurations authenticatedGitOp
 
 protocolStatsByHour :: Input -> [ProtocolStats]
 protocolStatsByHour rawLines = let  groups = groupBy (logDateEqHour `on` getDate) $ filter f $ parseLogLines rawLines
@@ -73,21 +80,22 @@ protocolStats formatLogDate = foldl' aggregate (ProtocolStats "" 0 0)
 -- | Return the number of clone operations per repository
 
 data RepositoryStat = RepositoryStat {
-    getName             :: S.ByteString
-  , getNumberOfClones   :: Int
+    getName           :: S.ByteString
+  , getNumberOfClones :: Int
 } | StatUnavailable deriving (Show)
 
 repositoryStats :: Input -> [RepositoryStat]
 repositoryStats xs =
-     let gitOps        = filter (\l -> isGitOperation l && isClone l) $ parseLogLines xs
-         perRepo       = groupByRepo $ sortBy (compare `on` repoSlug) gitOps
-         sortedPerRepo = sortBy (flip compare `on` getNumberOfClones) $ map t perRepo
-     in  sortedPerRepo
-     where groupByRepo = groupBy ((==) `on` repoSlug)
-           repoSlug    = lower . extractRepoSlug . getAction
-           lower       = fmap (map toLower)
-           t []             = StatUnavailable
-           t logLines@(x:_) = RepositoryStat (S.pack $ fromMaybe "n/a" (repoSlug x)) (length logLines)
+    let gitOps        = filter (\l -> isGitOperation l && isClone l) $ parseLogLines xs
+        perRepo       = groupByRepo $ sortBy (compare `on` repoSlug) gitOps
+        sortedPerRepo = sortBy (flip compare `on` getNumberOfClones) $ map t perRepo
+    in  sortedPerRepo
+  where
+    groupByRepo      = groupBy ((==) `on` repoSlug)
+    repoSlug         = lower . extractRepoSlug . getAction
+    lower            = fmap (map toLower)
+    t []             = StatUnavailable
+    t logLines@(x:_) = RepositoryStat (S.pack $ fromMaybe "n/a" (repoSlug x)) (length logLines)
 
 
 
@@ -98,7 +106,7 @@ authenticatedGitOp line = isJust (getUsername line)
 
 collectRequestDurations :: Input -> (LogLine -> Bool) -> [RequestDurationStat]
 collectRequestDurations rawLines p = map m $ filter f $ parseLogLines rawLines
-        where clientIp line = head $ split "," (S.unpack $ getRemoteAdress line)
+        where clientIp line = head $ UT.split "," (S.unpack $ getRemoteAdress line)
               ops           = [isClone, isFetch, isShallowClone, isPush, isRefAdvertisement]
               f line        = isOutgoingLogLine line && p line && isGitOperation line
               m line        =  let  duration    = fromMaybe 0 $ getRequestDuration line
@@ -132,6 +140,16 @@ summarizeGitOperations formatLogDate = foldl' aggregate emptyStats . filter isOu
                                     misses'     = zipWith id missOps misses
                                     hits'       = zipWith id hitOps hits
                                 in GitOperationStats date' misses' hits'
+
+-- | Return the repo slug from the logged action.
+--
+-- E.g. for "GET /scm/CONF/confluence.git/info/refs HTTP/1.1" this would return:
+--      "/CONF/confluence.git"
+extractRepoSlug :: Action -> Maybe String
+extractRepoSlug action =
+    let elems = UT.split ("/" :: String) (S.unpack $ getPath action)
+        f     = takeWhile (\s -> s /= "info" && not ("git" `isPrefixOf` s)) . dropWhile (`elem` ["", "scm", "git"])
+    in Just $ '/' : UT.join "/" (f elems)
 
 -- =================================================================================
 --                                Predicates
@@ -176,6 +194,15 @@ isRefs = inLabel "refs"
 
 isShallow = inLabel "shallow"
 
+isSsh :: LogLine -> Bool
+isSsh logLine = getProtocol logLine == "ssh"
+
+isHttp :: LogLine -> Bool
+isHttp logLine = proto == "http" || proto == "https"
+                where proto = getProtocol logLine
+
+
+
 inLabel :: String -> LogLine -> Bool
 inLabel name logLine =  let labels = getLabels logLine
                         in name `elem` labels
@@ -185,3 +212,12 @@ cachedOperation op logLine = op logLine && isCacheHit logLine
 
 uncachedOperation :: (LogLine -> Bool) -> LogLine -> Bool
 uncachedOperation op logLine = op logLine && isCacheMiss logLine
+
+-- | Check whether this is a log line for a response ("outgoing")
+isOutgoing :: RequestId -> Bool
+isOutgoing rid = getInOrOut rid == 'o'
+
+isOutgoingLogLine :: LogLine -> Bool
+isOutgoingLogLine = isOutgoing . getRequestId
+
+

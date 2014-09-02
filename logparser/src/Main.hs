@@ -1,14 +1,15 @@
-{-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE OverloadedStrings  #-}
 module Main where
 
-import System.Environment (getArgs, withArgs)
-import Stash.Log.Analyser
+import           Control.Monad            (liftM)
+import           Prelude                  hiding (takeWhile)
+import           Stash.Log.Analyser
 import qualified Stash.Log.GitOpsAnalyser as G
-import Stash.Log.Output
-import Stash.Log.Input
-import Control.Monad (liftM)
-import System.Console.CmdArgs
-import Prelude hiding (takeWhile)
+import           Stash.Log.Input
+import           Stash.Log.Output
+import           System.Console.CmdArgs
+import           System.Environment       (getArgs, withArgs)
 
 -- =================================================================================
 

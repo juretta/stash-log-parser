@@ -1,38 +1,39 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Stash.Log.Input
-( sortLogFiles
+( FileInfo(..)
+, RunConfig(..)
+, newRunConfig
+, sortLogFiles
 , readFiles
 , extractFileInfo
 , isFileNewer
 , filterLastDay
 , dropUntilDate
 , readLogFiles
-, FileInfo(..)
-, RunConfig(..)
-, newRunConfig
 ) where
 
+import qualified Codec.Compression.BZip     as BZip
+import           Control.Applicative
+import           Control.Monad              (liftM, liftM2)
+import           Data.Aeson                 (decode, encode)
 import qualified Data.ByteString.Lazy.Char8 as L
-import qualified Codec.Compression.BZip as BZip
-import qualified Data.Map as M
-import Data.Monoid (mappend)
-import Data.Maybe (isJust, fromMaybe, fromJust)
-import Data.List (isSuffixOf, sortBy, groupBy)
-import Data.String.Utils (split)
-import System.Path.NameManip
-import Control.Monad (liftM, liftM2)
-import Data.Aeson (decode, encode)
-import Data.Time.Clock
-import Data.Time.Calendar
-import Text.Printf (printf)
-import System.Directory (renameFile, doesFileExist)
+import           Data.List                  (groupBy, isSuffixOf, sortBy)
+import qualified Data.Map                   as M
+import           Data.Maybe                 (fromJust, fromMaybe, isJust)
+import           Data.Monoid                (mappend)
+import           Data.String.Utils          (split)
+import           Data.Time.Calendar
+import           Data.Time.Clock
+import           System.Directory           (doesFileExist, renameFile)
+import           System.Path.NameManip
+import           Text.Printf                (printf)
 
 data FileInfo = FileInfo {
-     year       :: String
-    ,month      :: String
-    ,day        :: String
-    ,counter    :: Int
+     year    :: String
+    ,month   :: String
+    ,day     :: String
+    ,counter :: Int
 } deriving (Show, Ord, Eq)
 
 newtype FileDateInfo = FileDateInfo FileInfo
@@ -73,7 +74,7 @@ extractFileInfo path = let elems = drop 3 $ split "-" $ extractFile path
                                _                     -> Nothing
 
 extractFileDateInfo :: FilePath -> Maybe FileDateInfo
-extractFileDateInfo path = fmap FileDateInfo $ extractFileInfo path
+extractFileDateInfo path = FileDateInfo <$> extractFileInfo path
 
 -- | Read the list of files and return a list of lines. The input files will be
 -- filtered using the function (FilePath -> Bool)

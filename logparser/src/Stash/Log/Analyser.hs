@@ -63,3 +63,7 @@ countLinesWith f = foldl' count' 0
 showLines :: Input -> [Maybe LogLine]
 showLines = take 5 . map parseLogLine
 
+
+-- | Check whether this is a log line for the request ("incoming")
+isIncoming :: RequestId -> Bool
+isIncoming rid = getInOrOut rid == 'i'
