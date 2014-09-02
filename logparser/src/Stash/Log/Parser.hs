@@ -11,16 +11,16 @@ module Stash.Log.Parser
 , parseLogLines
 ) where
 
-import           Data.Attoparsec.Char8      hiding (char, space, take, takeWhile)
-import qualified Data.Attoparsec.Lazy       as AL
-import           Data.ByteString.Char8      (readInt, readInteger)
-import qualified Data.ByteString.Char8      as S
-import qualified Data.ByteString.Lazy.Char8 as L
+import           Data.Attoparsec.ByteString.Char8 hiding (char, space, take, takeWhile)
+import qualified Data.Attoparsec.Lazy             as AL
+import           Data.ByteString.Char8            (readInt, readInteger)
+import qualified Data.ByteString.Char8            as S
+import qualified Data.ByteString.Lazy.Char8       as L
 import           Data.Default
-import           Data.Maybe                 (mapMaybe)
-import qualified Data.String.Utils          as UT
-import qualified Data.Text                  as T
-import           Text.Printf                (printf)
+import           Data.Maybe                       (mapMaybe)
+import qualified Data.String.Utils                as UT
+import qualified Data.Text                        as T
+import           Text.Printf                      (printf)
 
 type Input = [L.ByteString]
 
