@@ -8,7 +8,7 @@ rescue LoadError
   exit -1
 end
 
-ARTIFACTS=["dist/build/logparser/logparser", "dist/build/stash-support/stash-support"].freeze
+ARTIFACTS=["dist/build/logparser/logparser"].freeze
 
 desc "Clean build artifacts"
 task :clean do
