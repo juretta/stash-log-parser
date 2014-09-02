@@ -7,6 +7,6 @@ set yrange [0:*]
 
 set grid
 set xlabel "Date"
-set format x "%d %b"
+set format x "%d/%m\n%H:%M"
 set key left top reverse Left
 

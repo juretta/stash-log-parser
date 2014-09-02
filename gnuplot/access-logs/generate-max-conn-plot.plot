@@ -1,5 +1,8 @@
 load "shared.plot"
 
+set format x "%d/%m\n%H:%M"
+set timefmt "%Y-%m-%d %H:%M:%S"
+
 set output "max-conn.png"
 set ylabel "Connections"
 set title "Concurrent Connections per hour"
