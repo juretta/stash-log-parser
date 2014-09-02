@@ -16,6 +16,7 @@ import qualified Data.Attoparsec.Lazy       as AL
 import           Data.ByteString.Char8      (readInt, readInteger)
 import qualified Data.ByteString.Char8      as S
 import qualified Data.ByteString.Lazy.Char8 as L
+import           Data.Default
 import           Data.Maybe                 (mapMaybe)
 import qualified Data.String.Utils          as UT
 import qualified Data.Text                  as T
@@ -33,11 +34,20 @@ data Action = HttpAction {
 
 data InOurOut = In | Out deriving (Show, Eq)
 
+newtype NodeId = NodeId S.ByteString deriving (Eq, Show)
+
+
 data RequestId = RequestId {
-     getInOrOut             :: !Char
-    ,getRequestCounter      :: !Integer
-    ,getConcurrentRequests  :: !Integer
+    getInOrOut            :: !Char
+  , getRequestCounter     :: !Integer
+  , getConcurrentRequests :: !Integer
+  , getMinuteOfTheDay     :: !Int
+  , getNodeId             :: Maybe NodeId
+  , isClustered           :: Bool
 } deriving (Show, Eq)
+
+instance Default RequestId where
+    def = RequestId 'i' 0 0 0 Nothing False
 
 data LogLine = LogLine {
     getRemoteAdress    :: S.ByteString
@@ -126,19 +136,73 @@ parseEntry = do
     space
     return entry
 
--- | Parse the request Id. A request id consist of a a char indicating an
--- request 'i' or response 'o', followed by the minute of the day, a request
--- counter and the number of concurrent requests, separated by an 'x'. E.g. i8x1401519x6
+-- | Parse the request Id. A request id consist of a
+--
+--  * a char indicating an request 'i' or response 'o', followed by
+--
+--  For Stash 3.2 and later:
+--
+--  * a cluster node id prefixed with a char indicating whether the instance is
+--    currently clustered or not ('*' if currently clustered or '@' if not.)
+--
+--
+--  * the minute of the day,
+--  * a request counter and
+--  * the number of concurrent requests
+--
+--  separated by an 'x'.
+--
+--  E.g. i8x1401519x6 (for pre 3.2 versions of Stash) or o@2GNK8Mx1198x200381x2 for Stash 3.2 and later.
+--
+-- >>> AL.eitherResult $ AL.parse parseRequestId "i8x1401519x6"
+-- Right (RequestId {getInOrOut = 'i', getRequestCounter = 1401519, getConcurrentRequests = 6, getMinuteOfTheDay = 8, getNodeId = Nothing, isClustered = False})
+--
+-- >>> AL.eitherResult $ AL.parse parseRequestId "o@2GNK8Mx1198x200381x5"
+-- Right (RequestId {getInOrOut = 'o', getRequestCounter = 200381, getConcurrentRequests = 5, getMinuteOfTheDay = 1198, getNodeId = Just (NodeId "2GNK8M"), isClustered = False})
+--
+-- >>> AL.eitherResult $ AL.parse parseRequestId "i*2GNK8Mx1198x200381x22"
+-- Right (RequestId {getInOrOut = 'i', getRequestCounter = 200381, getConcurrentRequests = 22, getMinuteOfTheDay = 1198, getNodeId = Just (NodeId "2GNK8M"), isClustered = True})
 parseRequestId :: Parser RequestId
 parseRequestId = do
     which <- satisfy (\c -> c == 'i' || c == 'o')
-    _ <- takeTill (== 'x')
-    x
-    counter <- takeTill (== 'x')
-    x
-    concurrent <- takeTill (== ' ')
-    separator
-    return $ RequestId which (maybe 0 fst $ readInteger counter) (maybe 0 fst $ readInteger concurrent)
+
+    next <- peekChar
+    case next of
+        Just c | c == '*' || c == '@' -> parseClusterNodeRequestId which
+        _                             -> parsePre32RequestId which
+
+  where
+    parseClusterNodeRequestId which = do
+        clusterStatus <- satisfy (\c -> c == '*' || c == '@')
+        nodeId <- takeTill (== 'x')
+        x
+        minute <- decimal
+        x
+        counter <- takeTill (== 'x')
+        x
+        concurrent <- takeTill (== ' ')
+        return $ def {
+                     getInOrOut = which
+                   , getRequestCounter = (toInteger' counter)
+                   , getConcurrentRequests = (toInteger' concurrent)
+                   , getMinuteOfTheDay = minute
+                   , getNodeId = Just (NodeId nodeId)
+                   , isClustered = if clusterStatus == '*' then True else False
+               }
+    parsePre32RequestId which = do
+            minute <- decimal
+            _ <- takeTill (== 'x')
+            x
+            counter <- takeTill (== 'x')
+            x
+            concurrent <- takeTill (== ' ')
+            return $ def {
+                         getInOrOut = which
+                       , getRequestCounter = (toInteger' counter)
+                       , getConcurrentRequests = (toInteger' concurrent)
+                       , getMinuteOfTheDay = minute
+                   }
+    toInteger' = maybe 0 fst . readInteger
 
 separator :: Parser Char
 separator = do
@@ -186,6 +250,7 @@ parseLine = do
     remoteAddress <- logEntry
     protocol <- logEntry
     requestId <- parseRequestId
+    separator
     rawUsername <- logEntry
     date <- parseLogEntryDate
     action <- parseAction

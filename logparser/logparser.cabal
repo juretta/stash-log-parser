@@ -34,6 +34,7 @@ test-suite logparser-testsuite
                             time,
                             directory,
                             aeson,
+                            data-default,
                             bzlib,
                             QuickCheck >= 2.4.0.1
 
@@ -56,7 +57,8 @@ executable logparser
                             zip-conduit,
                             HaXml,
                             directory,
-                            aeson
+                            aeson,
+                            data-default
     ghc-options:
                             -Wall
                             -Werror
