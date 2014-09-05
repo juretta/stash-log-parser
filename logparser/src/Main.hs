@@ -1,13 +1,15 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE OverloadedStrings  #-}
 module Main where
 
 import           Control.Monad            (liftM)
+import           Control.Monad.Reader
 import           Prelude                  hiding (takeWhile)
 import           Stash.Log.Analyser
+import           Stash.Log.Chart
 import qualified Stash.Log.GitOpsAnalyser as G
 import           Stash.Log.Input
 import           Stash.Log.Output
+import           Stash.Log.Types
 import           System.Console.CmdArgs
 import           System.Environment       (getArgs, withArgs)
 
@@ -22,9 +24,10 @@ appVersion = "1.18"
 appShortDesc :: String
 appShortDesc = "Logparser for the Atlassian Stash access logs"
 
-data LogParser = MaxConn            {files :: [FilePath]}
+data LogParserRunMode =
+                  MaxConn            {files :: [FilePath]}
                 | CountRequests     {files :: [FilePath]}
-                | GitOperations     {files :: [FilePath], progressive :: Bool}
+                | GitOperations     {files :: [FilePath], progressive :: Bool, graph :: Bool, targetDir :: FilePath, aggregationLevel :: AggregationLevel}
                 | GitDurations      {files :: [FilePath], progressive :: Bool}
                 | ProtocolStats     {files :: [FilePath]}
                 | RepositoryStats   {files :: [FilePath]}
@@ -35,53 +38,65 @@ data LogParser = MaxConn            {files :: [FilePath]}
 progressiveFlags :: Bool
 progressiveFlags = False &= help "Progressively parse the logfiles" &= typ "BOOL"
 
+graphFlag :: Bool
+graphFlag = False &= help "Render graphs instead of printing statistics to STDOUT" &= typ "BOOL" &= groupname "Output"
 
-maxConn :: LogParser
+outputDirFlag :: FilePath
+outputDirFlag = def &= typDir &= help "Directory to be used to store the generated graphs. Default: working directory" &= groupname "Output"
+
+aggregationLevelFlag :: AggregationLevel
+aggregationLevelFlag = def &= help "Values will be aggregated by hour (default) or by minute" &= opt Hour &= groupname "Statistics" &= explicit &= name "level" &= typ "Hour|Minute"
+
+maxConn :: LogParserRunMode
 maxConn         = MaxConn {files = def &= args}
                 &= name "maxConn"       &= help "Show the maximum number of concurrent requests per hour"
 
-countRequests :: LogParser
+countRequests :: LogParserRunMode
 countRequests   = CountRequests {files = def &= args}
                 &= name "countRequests" &= help "Count the number of requests"
 
-gitOperations :: LogParser
-gitOperations   = GitOperations {files = def &= args, progressive = progressiveFlags}
-                &= name "gitOperations" &= help "Aggregate git operations per hour. Show counts for fetch, clone, push, pull and ref advertisement"
+gitOperations :: LogParserRunMode
+gitOperations   = GitOperations {files = def &= args, progressive = progressiveFlags, graph = graphFlag, targetDir = outputDirFlag, aggregationLevel = aggregationLevelFlag}
+                &= name "gitOperations" &= help "Aggregate git operations per hour or minute. Show counts for fetch, clone, push, pull and ref advertisement"
 
-gitDurations :: LogParser
+gitDurations :: LogParserRunMode
 gitDurations    = GitDurations {files = def &= args, progressive = progressiveFlags}
                 &= name "gitDurations"  &= help "Show the duration of git operations over time"
 
-protocolStats :: LogParser
+protocolStats :: LogParserRunMode
 protocolStats   = ProtocolStats {files = def &= args}
                 &= name "protocolStats" &= help "Aggregate the number of git operations per hour based on the access protocol (http(s) vs. SSH)"
 
-repositoryStats :: LogParser
+repositoryStats :: LogParserRunMode
 repositoryStats = RepositoryStats {files = def &= args}
                 &= name "repositoryStats" &= help "Show the number of git clone \
                     \operations per repository"
 
-count :: LogParser
+count :: LogParserRunMode
 count           = Count {files = def &= args}
                 &= name "count"         &= help "Count the number of lines in the given logfile(s)"
 
-debugParser :: LogParser
+debugParser :: LogParserRunMode
 debugParser     = DebugParser {files = def &= args, progressive = progressiveFlags}
                 &= name "debugParser"   &= help "Parse and print the first five lines of the log file"
 
 
-mode :: Mode (CmdArgs LogParser)
+mode :: Mode (CmdArgs LogParserRunMode)
 mode = cmdArgsMode $ modes [maxConn, countRequests, gitOperations, gitDurations,
                             protocolStats, repositoryStats, count, debugParser]
         &= help appShortDesc
+        &= helpArg [explicit, name "help", name "h"]
         &= program appName &= summary (appName ++ " " ++ appVersion)
         &= verbosity
 
 
-run :: LogParser -> IO ()
+run :: LogParserRunMode -> IO ()
 run (MaxConn files')                     = stream concurrentConnections printPlotDataConcurrentConn newRunConfig "printPlotDataConcurrentConn" files'
 run (CountRequests files')               = stream countRequestLines print newRunConfig "countRequestLines" files'
-run (GitOperations files' progressive')  = stream G.analyseGitOperations printPlotDataGitOps (RunConfig progressive') "printPlotDataGitOps" files'
+run (GitOperations files' progressive' False _ lvl) = stream (G.analyseGitOperations lvl) printPlotDataGitOps (RunConfig progressive') "printPlotDataGitOps" files'
+run (GitOperations files' progressive' True targetDir lvl) = do
+    let outputF = generateChart "gitOperations" targetDir
+    stream (G.analyseGitOperations lvl) outputF (RunConfig progressive') "printPlotDataGitOps" files'
 run (GitDurations files' progressive')   = stream G.gitRequestDuration printGitRequestDurations (RunConfig progressive') "gitRequestDuration" files'
 run (ProtocolStats files')               = stream G.protocolStatsByHour printProtocolData newRunConfig "printProtocolData" files'
 run (RepositoryStats files')             = stream G.repositoryStats printRepoStatsData newRunConfig "printRepoStatsData" files'
@@ -97,3 +112,8 @@ main = do
     -- We need arguments so if there are no arguments given, invoke the help command
     config <- (if null options then withArgs ["--help"] else id) $ cmdArgsRun mode
     run config
+
+
+
+instance Default AggregationLevel where
+    def = Hour

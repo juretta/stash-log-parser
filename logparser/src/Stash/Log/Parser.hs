@@ -11,15 +11,16 @@ module Stash.Log.Parser
 , parseLogLines
 ) where
 
-import           Data.Attoparsec.ByteString.Char8 hiding (char, space, take, takeWhile)
+import           Control.Applicative
+import           Data.Attoparsec.ByteString       (skip)
+import           Data.Attoparsec.ByteString.Char8 hiding (char, space, take,
+                                                   takeWhile)
 import qualified Data.Attoparsec.Lazy             as AL
 import           Data.ByteString.Char8            (readInt, readInteger)
 import qualified Data.ByteString.Char8            as S
 import qualified Data.ByteString.Lazy.Char8       as L
 import           Data.Default
 import           Data.Maybe                       (mapMaybe)
-import qualified Data.String.Utils                as UT
-import qualified Data.Text                        as T
 import           Text.Printf                      (printf)
 
 type Input = [L.ByteString]
@@ -57,7 +58,7 @@ data LogLine = LogLine {
   , getDate            :: LogDate
   , getAction          :: Action
   , getDetails         :: S.ByteString
-  , getLabels          :: [String]
+  , getLabels          :: [S.ByteString]
   , getRequestDuration :: Maybe Int
   , getSessionId       :: S.ByteString
 } deriving (Show, Eq)
@@ -71,6 +72,9 @@ data LogDate = LogDate {
   , getSeconds :: !Int
   , getMillis  :: !Int
 } deriving (Eq)
+
+instance Default LogDate where
+    def = LogDate 1970 1 1 0 0 0 0
 
 instance Show LogDate where
     show date = printf "%04d-%02d-%02d %02d:%02d:%02d" (getYear date)
@@ -90,17 +94,20 @@ parseLogLine = AL.maybeResult . AL.parse parseLine
 
 -- =================================================================================
 
-pipe, space, dash, colon, comma, quote, single, x :: Parser Char
-pipe        = satisfy (== '|')
-space       = satisfy (== ' ')
-dash        = satisfy (== '-')
-colon       = satisfy (== ':')
-comma       = satisfy (== ',')
-quote       = satisfy (== '"')
-single      = satisfy (== '\'')
-x           = satisfy (== 'x')
+pipe, space, dash, colon, comma, quote, single, x :: Parser ()
+pipe        = skip (== 124) -- '|'
+space       = skip (== 32)  -- ' '
+dash        = skip (== 45)  -- '-'
+colon       = skip (== 58)  -- ':'
+comma       = skip (== 44)  -- ','
+quote       = skip (== 34)  -- '"'
+single      = skip (== 39)  -- '\''
+x           = skip (== 120) -- 'x'
 
--- 2012-08-22 18:32:08,505
+-- | Parse a log entry date like 2012-08-22 18:32:08,505
+--
+-- >>> AL.eitherResult $ AL.parse parseLogEntryDate "2012-08-22 18:32:08,505"
+-- Right 2012-08-22 18:32:08
 parseLogEntryDate :: Parser LogDate
 parseLogEntryDate = do
     year <- decimal
@@ -116,7 +123,6 @@ parseLogEntryDate = do
     second <- decimal
     comma
     millis <- decimal
-    separator
     return $ LogDate year month day hour minute second millis
 
 logEntry :: Parser S.ByteString
@@ -183,11 +189,11 @@ parseRequestId = do
         concurrent <- takeTill (== ' ')
         return $ def {
                      getInOrOut = which
-                   , getRequestCounter = (toInteger' counter)
-                   , getConcurrentRequests = (toInteger' concurrent)
+                   , getRequestCounter = toInteger' counter
+                   , getConcurrentRequests = toInteger' concurrent
                    , getMinuteOfTheDay = minute
                    , getNodeId = Just (NodeId nodeId)
-                   , isClustered = if clusterStatus == '*' then True else False
+                   , isClustered = clusterStatus == '*'
                }
     parsePre32RequestId which = do
             minute <- decimal
@@ -198,13 +204,13 @@ parseRequestId = do
             concurrent <- takeTill (== ' ')
             return $ def {
                          getInOrOut = which
-                       , getRequestCounter = (toInteger' counter)
-                       , getConcurrentRequests = (toInteger' concurrent)
+                       , getRequestCounter = toInteger' counter
+                       , getConcurrentRequests = toInteger' concurrent
                        , getMinuteOfTheDay = minute
                    }
     toInteger' = maybe 0 fst . readInteger
 
-separator :: Parser Char
+separator :: Parser ()
 separator = do
     space
     pipe
@@ -226,7 +232,6 @@ parseSshAction = do
     single
     path <- takeTill (== '\'')
     single
-    separator
     return $ SshAction method path
 
 
@@ -240,7 +245,6 @@ parseHttpAction = do
     space
     _ <- takeTill (== '"')
     quote
-    separator
     return $ HttpAction method path
 
 
@@ -253,16 +257,30 @@ parseLine = do
     separator
     rawUsername <- logEntry
     date <- parseLogEntryDate
+    separator
     action <- parseAction
+    separator
     details <- logEntry
     labels_ <- logEntry
     duration <- parseDuration
     sessionId <- logEntry
-    let labels = map trim $ UT.split "," (S.unpack labels_)
+    let labels = trim <$> S.split ',' labels_
         username = if rawUsername == "-" then Nothing else Just rawUsername
     return $ LogLine remoteAddress protocol requestId username date
                     action details labels duration sessionId
 
 -- | Remove leading and trailing whitespace
-trim :: String -> String
-trim = T.unpack . T.strip . T.pack
+--
+-- >>> trim " foo "
+-- "foo"
+--
+-- >>> trim "foo "
+-- "foo"
+--
+-- >>> trim " foo"
+-- "foo"
+--
+-- >>> trim " foo bar "
+-- "foo bar"
+trim :: S.ByteString -> S.ByteString
+trim = S.reverse . S.dropWhile (== ' ') . S.reverse . S.dropWhile (== ' ')

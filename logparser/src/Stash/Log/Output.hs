@@ -18,16 +18,20 @@ import Stash.Log.GitOpsAnalyser
 import Stash.Log.Input
 import Text.Printf (printf)
 
+
+formatLogDateHour :: LogDate -> String
+formatLogDateHour date = printf "%04d-%02d-%02d %02d:%02d" (getYear date) (getMonth date) (getDay date) (getHour date) (getMinute date)
+
 printProtocolData :: [ProtocolStats] -> IO ()
 printProtocolData plotData = do
         printf "# Date | SSH | HTTP(s)\n"
-        mapM_ (\(ProtocolStats date ssh http) -> printf "%s|%d|%d\n" date ssh http) plotData
+        mapM_ (\(ProtocolStats date ssh http) -> printf "%s|%d|%d\n" (formatLogDateHour date) ssh http) plotData
 
 printPlotDataGitOps :: [GitOperationStats] -> IO ()
 printPlotDataGitOps plotData = do
         printf "# Date | clone | fetch | shallow clone | push | ref advertisement | clone (hit) | fetch (hit) | shallow clone (hit) | push (hit) | ref advertisement (hit) | clone (miss) | fetch (miss) | shallow clone (miss) | push (miss) | ref advertisement (miss)\n"
         mapM_ (\(GitOperationStats date [a,b,c,d,e] [aHit,bHit,cHit,dHit,eHit])
-                -> printf "%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d\n" date (a+aHit) (b+bHit) (c+cHit) (d+dHit) (e+eHit) aHit bHit cHit dHit eHit a b c d e) plotData
+                -> printf "%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d\n" (formatLogDateHour date) (a+aHit) (b+bHit) (c+cHit) (d+dHit) (e+eHit) aHit bHit cHit dHit eHit a b c d e) plotData
 
 printPlotDataConcurrentConn :: [DateValuePair] -> IO ()
 printPlotDataConcurrentConn plotData = do
@@ -38,7 +42,7 @@ printGitRequestDurations :: [RequestDurationStat] -> IO ()
 printGitRequestDurations plotData = do
         printf "# Date | Clone duration (cache hit) | Clone duration (cache miss) | Fetch (hit) | Fetch (miss) | Shallow Clone (hit) | Shallow Clone (miss) | Push (hit) | Push (miss) | Ref adv (hit) | Ref adv (miss) | Client IP | Username \n"
         mapM_ (\(RequestDurationStat date clientIp [cm,fm,sm,pm,rm] [c,f,s,p,r] username)
-                -> printf "%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%s|%s\n" (show date) c cm f fm s sm p pm r rm clientIp (S.unpack username)) plotData
+                -> printf "%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%s|%s\n" (formatLogDateHour date) c cm f fm s sm p pm r rm clientIp (S.unpack username)) plotData
 
 printRepoStatsData :: [RepositoryStat] -> IO ()
 printRepoStatsData xs = do

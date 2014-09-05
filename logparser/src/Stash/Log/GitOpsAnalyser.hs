@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module Stash.Log.GitOpsAnalyser
 (
@@ -24,19 +25,33 @@ module Stash.Log.GitOpsAnalyser
 
 import qualified Data.ByteString.Char8 as S
 import           Data.Char             (toLower)
+import           Data.Default
 import           Data.Function         (on)
 import           Data.List             (foldl', groupBy, isPrefixOf, sortBy)
-import           Data.Maybe            (fromMaybe, isJust)
+import           Data.Maybe            (catMaybes, fromMaybe, isJust)
 import qualified Data.String.Utils     as UT
-import           Stash.Log.Common      (logDateEqHour)
+import           Stash.Log.Common
 import           Stash.Log.Parser
-import           Text.Printf           (printf)
+import           Stash.Log.Types
+import           Control.DeepSeq
+
+
 
 data GitOperationStats = GitOperationStats {
-    getOpStatDate :: !String
+    getOpStatDate :: !LogDate
   , cacheMisses   :: ![Int] -- clone, fetch, shallow clone, push, ref advertisement
   , cacheHits     :: ![Int]
-}
+} deriving (Show)
+
+instance NFData GitOperationStats where
+    rnf gos@GitOperationStats{..} =
+        gos {
+            getOpStatDate = getOpStatDate `seq` getOpStatDate
+          , cacheMisses = cacheMisses `deepseq` cacheMisses
+          , cacheHits = cacheHits `deepseq` cacheHits
+        } `seq` ()
+
+
 
 data RequestDurationStat = RequestDurationStat {
     getDurationDate    :: !LogDate
@@ -47,17 +62,19 @@ data RequestDurationStat = RequestDurationStat {
 }
 
 data ProtocolStats = ProtocolStats {
-    getProtocolLogDate :: !String
+    getProtocolLogDate :: !LogDate
   , getSsh             :: !Int
   , getHttp            :: !Int
 }
 
 -- | Parse and aggregate the log file input into a list of hourly GitOperationStats
-analyseGitOperations :: Input -> [GitOperationStats]
-analyseGitOperations rawLines =
-    let formatLogDate date = printf "%04d-%02d-%02d %02d" (getYear date) (getMonth date)
-                            (getDay date) (getHour date)
-    in analyseGitOperations' logDateEqHour formatLogDate rawLines
+analyseGitOperations :: AggregationLevel -> Input -> [GitOperationStats]
+analyseGitOperations lvl rawLines =
+    let f = case lvl of
+                Hour -> logDateEqHour
+                Minute -> logDateEqMinute
+        groups = groupBy (f `on` getDate) $ parseLogLines rawLines
+    in catMaybes $ map summarizeGitOperations groups
 
 -- | Return the duration of clone (clone and shallow clone) operations
 gitRequestDuration :: Input -> [RequestDurationStat]
@@ -65,17 +82,18 @@ gitRequestDuration = flip collectRequestDurations authenticatedGitOp
 
 protocolStatsByHour :: Input -> [ProtocolStats]
 protocolStatsByHour rawLines = let  groups = groupBy (logDateEqHour `on` getDate) $ filter f $ parseLogLines rawLines
-                                    formatLogDate date = printf "%04d-%02d-%02d %02d" (getYear date) (getMonth date) (getDay date) (getHour date)
-                                in map (protocolStats formatLogDate) groups
+                                in map protocolStats groups
                             where f line = isOutgoingLogLine line && isGitOperation line
 
-protocolStats :: (LogDate -> String) -> [LogLine] -> ProtocolStats
-protocolStats formatLogDate = foldl' aggregate (ProtocolStats "" 0 0)
-                        where aggregate (ProtocolStats date ssh http) logLine =
-                                    let !ssh'   = if isSsh logLine then ssh + 1 else ssh
-                                        !http'  = if isHttp logLine then http + 1 else http
-                                        !date'  = if null date then formatLogDate $ getDate logLine else date
-                                    in ProtocolStats date' ssh' http'
+protocolStats :: [LogLine] -> ProtocolStats
+protocolStats = foldl' aggregate emptyStats
+  where
+    aggregate (ProtocolStats date ssh http) logLine =
+          let !ssh'   = if isSsh logLine then ssh + 1 else ssh
+              !http'  = if isHttp logLine then http + 1 else http
+              !date'  = if defaultDate == date then getDate logLine else date
+          in ProtocolStats date' ssh' http'
+    emptyStats = ProtocolStats defaultDate 0 0
 
 -- | Return the number of clone operations per repository
 
@@ -112,34 +130,41 @@ collectRequestDurations rawLines p = map m $ filter f $ parseLogLines rawLines
               m line        =  let  duration    = fromMaybe 0 $ getRequestDuration line
                                     zero        = replicate 5 0
                                     inc op      = if op line then (+duration) else id
-                                    missOps     = map (inc . uncachedOperation) ops
-                                    hitOps      = map (inc . cachedOperation) ops
+                                    missOps     = map (inc . isUncachedOperation) ops
+                                    hitOps      = map (inc . isCachedOperation) ops
                                     username'   = fromMaybe "-" $ getUsername line
                                     !misses     = zipWith id missOps zero
                                     !hits       = zipWith id hitOps zero
                                in RequestDurationStat (getDate line) (clientIp line) misses hits username'
 
-emptyStats :: GitOperationStats
-emptyStats = GitOperationStats "" zero zero
-            where zero = replicate 5 0
 
-analyseGitOperations' :: (LogDate -> LogDate -> Bool) -> (LogDate -> String) -> Input -> [GitOperationStats]
-analyseGitOperations' comp formatLogDate rawLines =
-    let groups = groupBy (comp `on` getDate) $ parseLogLines rawLines
-    in map (summarizeGitOperations formatLogDate) groups
+defaultDate :: LogDate
+defaultDate = def
 
 
-summarizeGitOperations :: (LogDate -> String) -> [LogLine] -> GitOperationStats
-summarizeGitOperations formatLogDate = foldl' aggregate emptyStats . filter isOutgoingLogLine
-                        where aggregate (GitOperationStats date misses hits) logLine =
-                                let ops         = [isClone, isFetch, isShallowClone, isPush, isRefAdvertisement]
-                                    inc op      = if op logLine then (+1) else (+0)
-                                    missOps     = map (inc . uncachedOperation) ops
-                                    hitOps      = map (inc . cachedOperation) ops
-                                    date'       = if null date then formatLogDate $ getDate logLine else date
-                                    misses'     = zipWith id missOps misses
-                                    hits'       = zipWith id hitOps hits
-                                in GitOperationStats date' misses' hits'
+summarizeGitOperations :: [LogLine] -> Maybe GitOperationStats
+summarizeGitOperations = foldl' aggregate Nothing . filter isOutgoingLogLine
+  where
+    zero = replicate 5 0
+    aggregate Nothing logLine =
+      let ops         = [isClone, isFetch, isShallowClone, isPush, isRefAdvertisement]
+          inc op      = if op logLine then (+1) else (+0)
+          missOps     = map (inc . isUncachedOperation) ops
+          hitOps      = map (inc . isCachedOperation) ops
+          date'       = getDate logLine
+          misses'     = zipWith id missOps zero
+          hits'       = zipWith id hitOps zero
+          gos         = Just $ GitOperationStats date' misses' hits'
+      in gos `deepseq` gos
+    aggregate (Just (GitOperationStats date misses hits)) logLine =
+      let ops         = [isClone, isFetch, isShallowClone, isPush, isRefAdvertisement]
+          inc op      = if op logLine then (+1) else (+0)
+          missOps     = map (inc . isUncachedOperation) ops
+          hitOps      = map (inc . isCachedOperation) ops
+          misses'     = zipWith id missOps misses
+          hits'       = zipWith id hitOps hits
+          gos         = Just $ GitOperationStats date misses' hits'
+      in gos `deepseq` gos
 
 -- | Return the repo slug from the logged action.
 --
@@ -163,14 +188,14 @@ isGitOperation line = any (\g -> g line) ops
 -- labels field, most of the data we have does _not_ have that information though
 isRefAdvertisement :: LogLine -> Bool
 isRefAdvertisement logLine = authenticatedGitOp logLine && isOutgoingLogLine logLine && refAdvertisement logLine
-            where
-                action      = getAction logLine
-                path        = getPath action
-                method      = getMethod action
-                refAdvertisement line
-                            | isSsh line        = isRefs line || not (any ($ line) [isClone, isFetch, isShallowClone])
-                            | isHttp line       = ".git/info/refs" `S.isSuffixOf` path && "GET" == method
-                            | otherwise         = False
+  where
+    action      = getAction logLine
+    path        = getPath action
+    method      = getMethod action
+    refAdvertisement line
+                | isSsh line        = isRefs line || not (any ($ line) [isClone, isFetch, isShallowClone])
+                | isHttp line       = ".git/info/refs" `S.isSuffixOf` path && "GET" == method
+                | otherwise         = False
 
 isCacheHit, isCacheMiss, isFetch, isClone, isShallowClone, isPush, isRefs, isShallow :: LogLine -> Bool
 isCacheHit = inLabel "cache:hit"
@@ -201,17 +226,15 @@ isHttp :: LogLine -> Bool
 isHttp logLine = proto == "http" || proto == "https"
                 where proto = getProtocol logLine
 
-
-
-inLabel :: String -> LogLine -> Bool
+inLabel :: S.ByteString -> LogLine -> Bool
 inLabel name logLine =  let labels = getLabels logLine
                         in name `elem` labels
 
-cachedOperation :: (LogLine -> Bool) -> LogLine -> Bool
-cachedOperation op logLine = op logLine && isCacheHit logLine
+isCachedOperation :: (LogLine -> Bool) -> LogLine -> Bool
+isCachedOperation op logLine = op logLine && isCacheHit logLine
 
-uncachedOperation :: (LogLine -> Bool) -> LogLine -> Bool
-uncachedOperation op logLine = op logLine && isCacheMiss logLine
+isUncachedOperation :: (LogLine -> Bool) -> LogLine -> Bool
+isUncachedOperation op logLine = op logLine && isCacheMiss logLine
 
 -- | Check whether this is a log line for a response ("outgoing")
 isOutgoing :: RequestId -> Bool
