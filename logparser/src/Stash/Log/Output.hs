@@ -10,13 +10,13 @@ module Stash.Log.Output
 ) where
 
 
+import qualified Data.ByteString.Char8      as S
 import qualified Data.ByteString.Lazy.Char8 as L
-import qualified Data.ByteString.Char8 as S
-import Stash.Log.Parser
-import Stash.Log.Analyser
-import Stash.Log.GitOpsAnalyser
-import Stash.Log.Input
-import Text.Printf (printf)
+import           Stash.Log.Analyser
+import           Stash.Log.GitOpsAnalyser
+import           Stash.Log.Input
+import           Stash.Log.Parser
+import           Text.Printf
 
 
 formatLogDateHour :: LogDate -> String
@@ -42,7 +42,7 @@ printGitRequestDurations :: [RequestDurationStat] -> IO ()
 printGitRequestDurations plotData = do
         printf "# Date | Clone duration (cache hit) | Clone duration (cache miss) | Fetch (hit) | Fetch (miss) | Shallow Clone (hit) | Shallow Clone (miss) | Push (hit) | Push (miss) | Ref adv (hit) | Ref adv (miss) | Client IP | Username \n"
         mapM_ (\(RequestDurationStat date clientIp [cm,fm,sm,pm,rm] [c,f,s,p,r] username)
-                -> printf "%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%s|%s\n" (formatLogDateHour date) c cm f fm s sm p pm r rm clientIp (S.unpack username)) plotData
+                -> printf "%s|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%s|%s\n" (formatLogDateHour date) c cm f fm s sm p pm r rm (S.unpack clientIp) (S.unpack username)) plotData
 
 printRepoStatsData :: [RepositoryStat] -> IO ()
 printRepoStatsData xs = do
@@ -59,3 +59,5 @@ formatLogDate :: LogDate -> String
 formatLogDate date = printf "%04d-%02d-%02d %02d:%02d" (getYear date) (getMonth date)
                             (getDay date) (getHour date) (getMinute date)
 
+
+-- instance PrintfArg Millis where

@@ -3,54 +3,106 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Stash.Log.Chart (
-  generateChart
+    generateGitOperationsChart
+  , generateGitDurationChart
 ) where
 
 import           Control.Applicative
+import           Control.DeepSeq
 import           Control.Lens
 import           Data.Colour
 import           Data.Colour.Names
-import           Data.Colour.SRGB
-import           Data.Time.LocalTime
 import           Data.Default.Class
+import           Data.Time.LocalTime
 import           Graphics.Rendering.Chart
 import           Graphics.Rendering.Chart.Backend.Cairo
 import           Stash.Log.Common
 import           Stash.Log.GitOpsAnalyser
-import           System.Directory                       (getDirectoryContents, createDirectoryIfMissing)
-import           System.FilePath                        ((</>), takeBaseName)
+import           Stash.Log.Types
+import           System.Directory                       (createDirectoryIfMissing)
+import           System.FilePath                        ((</>))
 
-type Data = [(LocalTime,Double)]
+
+-- =================================================================================
+
+generateGitOperationsChart :: String -> FilePath -> [GitOperationStats] -> IO ()
+generateGitOperationsChart fileName targetDir xs = renderChart targetDir fileName (gitOperationsChart xs)
+
+
+generateGitDurationChart :: String -> FilePath -> [RequestDurationStat] -> IO ()
+generateGitDurationChart fileName targetDir xs = do
+    renderChart targetDir (fileName ++ "-clone")             (gitDurationChart Clone xs)
+    renderChart targetDir (fileName ++ "-push")              (gitDurationChart Push xs)
+    renderChart targetDir (fileName ++ "-shallow-clone")     (gitDurationChart ShallowClone xs)
+    renderChart targetDir (fileName ++ "-fetch")             (gitDurationChart Fetch xs)
+    renderChart targetDir (fileName ++ "-rev-advertisement") (gitDurationChart RefAdvertisement xs)
+    return ()
+
+-- =================================================================================
+
+data OperationType = Clone | ShallowClone | Fetch | Push | RefAdvertisement deriving (Eq, Show)
+
+type Data a = [(LocalTime,a)]
 
 data Anchor = ALeft | ARight deriving (Eq, Show)
 
-data Line = Line {
-    anchor         :: Anchor
-  , lbl            :: String
-  , lineDataPoints :: Data
+data Line a = Line {
+    anchor         :: !Anchor
+  , lbl            :: !String
+  , lineDataPoints :: Data a
+  , color          :: Colour Double
 } deriving (Eq, Show)
 
-{-
-data GitOperationStats = GitOperationStats {
-    getOpStatDate :: !String
-  , cacheMisses   :: ![Int] -- clone, fetch, shallow clone, push, ref advertisement
-  , cacheHits     :: ![Int]
-}
--}
+instance (Num a, NFData a) => NFData (Line a) where
+    rnf l@Line{..} =
+        l {
+            anchor = anchor `seq` anchor
+          , lbl = lbl `seq` lbl
+          , lineDataPoints = lineDataPoints `deepseq` lineDataPoints
+          , color = color `seq` color
+        } `seq` ()
 
-chart :: [GitOperationStats] -> Renderable ()
-chart xs =
+instance NFData LogValue where
+    rnf (LogValue d) = d `seq` ()
+
+
+gitDurationChart :: OperationType -> [RequestDurationStat] -> Renderable ()
+gitDurationChart op' xs =
+        pointChart "Duration of Git Operations (in seconds)" (toLines op' xs)
+  where
+     toLines _ []                = []
+     toLines Clone ys            = [Line ALeft "clone/cache hit" (extractClonesHit ys) green, Line ALeft "clone/cache miss" (extractClonesMiss ys) darkred ]
+     toLines ShallowClone ys     = [Line ALeft "shallow clone/cache hit" (extractShallowClonesHit ys) green
+                                  , Line ALeft "shallow clone/cache miss" (extractShallowClonesMiss ys) darkred ]
+     toLines Push ys             = [Line ALeft "push" (extractPushes ys) darkgray]
+     toLines Fetch ys            = [Line ALeft "fetch/cache hit" (extractFetchesHit ys) green, Line ALeft "fetch/cache miss" (extractFetchesMiss ys) darkred ]
+     toLines RefAdvertisement ys = [Line ALeft "ref advertisement/cache hit" (extractRefAdvertisementsHit ys) green, Line ALeft "ref advertisement/cache miss" (extractRefAdvertisementsMiss ys) darkred ]
+     extractClonesHit             = extractField 0 cacheHitDurations
+     extractClonesMiss            = extractField 0 cacheMissDurations
+     extractFetchesHit            = extractField 1 cacheHitDurations
+     extractFetchesMiss           = extractField 1 cacheMissDurations
+     extractShallowClonesHit      = extractField 2 cacheHitDurations
+     extractShallowClonesMiss     = extractField 2 cacheMissDurations
+     extractPushes                = fmap (\RequestDurationStat{..} -> (toLocalTime getDurationDate, toLogValue (cacheHitDurations !! 3 + cacheMissDurations !! 3)))
+     extractRefAdvertisementsHit  = extractField 4 cacheHitDurations
+     extractRefAdvertisementsMiss = extractField 4 cacheMissDurations
+     extractField x f             = fmap (\r@RequestDurationStat{..} -> (toLocalTime getDurationDate, toLogValue ((f r) !! x)))
+     toLogValue                   = LogValue . toSeconds
+
+
+gitOperationsChart :: [GitOperationStats] -> Renderable ()
+gitOperationsChart xs =
         stackedWithLinesChart "Git Hosting Operations" (refLines xs) (toLines xs)
   where
      toLines []               = []
      toLines ys               = [
-                                    Line ALeft "clone" (extractClones ys)
-                                  , Line ALeft "fetch" (extractFetches ys)
-                                  , Line ALeft "shallow clone" (extractShallowClones ys)
-                                  , Line ALeft "push" (extractPushes ys)
+                                    Line ALeft "clone" (extractClones ys) blue
+                                  , Line ALeft "fetch" (extractFetches ys) darkorange
+                                  , Line ALeft "shallow clone" (extractShallowClones ys) green
+                                  , Line ALeft "push" (extractPushes ys) darkgray
                                 ]
      refLines []              = []
-     refLines ys              = [Line ARight "ref advertisement" (extractRefAdvertisements ys)]
+     refLines ys              = [Line ARight "ref advertisement" (extractRefAdvertisements ys) steelblue]
      extractClones            = extractField 0
      extractFetches           = extractField 1
      extractShallowClones     = extractField 2
@@ -59,8 +111,8 @@ chart xs =
      extractField x           = fmap (\GitOperationStats{..} -> (toLocalTime getOpStatDate, toDouble (cacheHits !! x + cacheMisses !! x)))
 
 
-colors :: [Colour Double]
-colors = cycle [blue, darkorange, green, darkred, darkgray, steelblue, yellow, black]
+-- colors :: [Colour Double]
+-- colors = cycle [blue, darkorange, green, darkred, darkgray, steelblue, yellow, black]
 
 
 -- chartLeftRight :: String -> [Line] -> Renderable ()
@@ -74,49 +126,47 @@ colors = cycle [blue, darkorange, green, darkred, darkgray, steelblue, yellow, b
 --            $ layoutlr_plots .~ p
 --            $ setLayoutLRForeground (opaque black)
 --            $ def
--- 
+--
 --     line col title' dat = plot_lines_style .~ lineStyle col
 --            $ plot_lines_values .~ [dat]
 --            $ plot_lines_title .~ title'
 --            $ def
--- 
+--
 --     lineStyle col = line_width .~ 1
 --               $ line_color .~ opaque col
 --               $ def
--- 
+--
 --     toEither (Line ALeft lbl points) col = Left (toPlot $ line col lbl points)
 --     toEither (Line ARight lbl points) col = Right (toPlot $ line col lbl points)
--- 
--- 
--- 
--- lineChart :: String -> [Line] -> Renderable ()
--- lineChart title lines' = do
---     let plots = (\(Line{..}, col) -> toPlot $ line col lbl lineDataPoints) <$> zip lines' colors
---     toRenderable (layout plots)
---   where
---     layout p = layout_title .~ title
---            $ layout_background .~ solidFillStyle (opaque white)
---            $ layout_left_axis_visibility . axis_show_ticks .~ True
---            $ layout_plots .~ p
---            $ setLayoutForeground (opaque black)
---            $ def
--- 
---     line col title' dat = plot_lines_style .~ lineStyle col
---            $ plot_lines_values .~ [dat]
---            $ plot_lines_title .~ title'
---            $ def
--- 
---     lineStyle col = line_width .~ 1
---               $ line_color .~ opaque col
---               $ def
--- 
+--
+--
+--
+pointChart :: String -> [Line LogValue] -> Renderable ()
+pointChart title lines' = do
+    let plots = (\Line{..} -> toPlot $ points color lbl lineDataPoints) <$> lines' -- :: [(Plot LocalTime LogValue)]
+    toRenderable (layout plots)
+  where
+    layout p = layout_title .~ title
+           $ layout_background .~ solidFillStyle (opaque white)
+           $ layout_left_axis_visibility . axis_show_ticks .~ True
+           $ layout_plots .~ p
+           $ setLayoutForeground (opaque black)
+           $ def
+
+    {-points :: Colour LogValue -> String -> Data LogValue -> PlotPoints LocalTime LogValue-}
+    points col title' dat = plot_points_style .~ filledCircles 1 (opaque col)
+           $ plot_points_values .~ dat
+           $ plot_points_title .~ title'
+           $ def
+
+
 -- stackedChart :: String -> [Line] -> Renderable ()
 -- stackedChart title = stackedWithLinesChart title []
 
-stackedWithLinesChart :: String -> [Line] -> [Line] -> Renderable ()
+stackedWithLinesChart :: String -> [Line Double] -> [Line Double] -> Renderable ()
 stackedWithLinesChart title singleLines' lines' = do
-    let stacked = uncurry (toEither line) <$> zip lines' colors
-        single' = uncurry (toEither single) <$> zip singleLines' colors :: [Either (Plot LocalTime Double) (Plot LocalTime Double)]
+    let stacked = (toEither line) <$> lines'
+        single' = (toEither single) <$> singleLines' :: [Either (Plot LocalTime Double) (Plot LocalTime Double)]
     toRenderable (layout $ single' ++ stacked)
   where
     line col title' dat = plot_fillbetween_style .~ solidFillStyle (col `withOpacity` 0.4)
@@ -140,18 +190,32 @@ stackedWithLinesChart title singleLines' lines' = do
               $ line_color .~ opaque col
               $ def
 
-    toEither f (Line ALeft lbl points) col = Left (toPlot $ f col lbl points)
-    toEither f (Line ARight lbl points) col = Right (toPlot $ f col lbl points)
+    toEither f (Line ALeft lbl points col) = Left (toPlot $ f col lbl points)
+    toEither f (Line ARight lbl points col) = Right (toPlot $ f col lbl points)
 
-generateChart fileName targetDir xs = renderChart targetDir fileName (chart xs)
 
 
 renderChart :: FilePath -> String -> Renderable a -> IO ()
 renderChart targetDir filename rend = do
     createDirectoryIfMissing True targetDir
+    {-_ <- renderableToFile (FileOptions (1200,800) PNG) rend (targetDir </> filename ++ ".png")-}
     _ <- renderableToFile (FileOptions (1200,800) PDF) rend (targetDir </> filename ++ ".pdf")
     return ()
 
 
 toDouble :: Int -> Double
-toDouble x = fromIntegral x * 1.0
+toDouble = (1.0 *) . fromIntegral
+
+-- |
+--
+-- >>> toMinutes (Millis 1200)
+-- 2.0e-2
+-- toMinutes :: Millis -> Double
+-- toMinutes = (/ (60.0 * 1000)) . fromIntegral . millis
+
+-- |
+--
+-- >>> toSeconds (Millis 1200)
+-- 12
+toSeconds :: Millis -> Double
+toSeconds = (/ 1000.0) . fromIntegral . millis

@@ -36,12 +36,25 @@ import           Stash.Log.Types
 import           Control.DeepSeq
 
 
-
 data GitOperationStats = GitOperationStats {
     getOpStatDate :: !LogDate
   , cacheMisses   :: ![Int] -- clone, fetch, shallow clone, push, ref advertisement
   , cacheHits     :: ![Int]
 } deriving (Show)
+
+data RequestDurationStat = RequestDurationStat {
+    getDurationDate    :: !LogDate
+  , getClientIp        :: !S.ByteString
+  , cacheMissDurations :: ![Millis]
+  , cacheHitDurations  :: ![Millis] -- clone, fetch, shallow clone, push, ref advertisement
+  , requestUsername    :: !S.ByteString
+}
+
+data ProtocolStats = ProtocolStats {
+    getProtocolLogDate :: !LogDate
+  , getSsh             :: !Int
+  , getHttp            :: !Int
+}
 
 instance NFData GitOperationStats where
     rnf gos@GitOperationStats{..} =
@@ -51,21 +64,27 @@ instance NFData GitOperationStats where
           , cacheHits = cacheHits `deepseq` cacheHits
         } `seq` ()
 
+instance NFData Millis where
+    rnf (Millis m) = m `seq` ()
 
-
-data RequestDurationStat = RequestDurationStat {
-    getDurationDate    :: !LogDate
-  , getClientIp        :: !String
-  , cacheMissDurations :: ![Int]
-  , cacheHitDurations  :: ![Int] -- clone, fetch, shallow clone, push, ref advertisement
-  , requestUsername    :: !S.ByteString
-}
-
-data ProtocolStats = ProtocolStats {
-    getProtocolLogDate :: !LogDate
-  , getSsh             :: !Int
-  , getHttp            :: !Int
-}
+instance NFData RequestDurationStat where
+    rnf rd@RequestDurationStat{..} =
+        rd {
+            getDurationDate = getDurationDate `seq` getDurationDate
+          , getClientIp = getClientIp `seq` getClientIp
+          , cacheMissDurations = cacheMissDurations `deepseq` cacheMissDurations
+          , cacheHitDurations = cacheHitDurations `deepseq` cacheHitDurations
+          , requestUsername = requestUsername `seq` requestUsername
+        } `seq` ()
+{-
+instance NFData GitOperationStats where
+    rnf gos@GitOperationStats{..} =
+        gos {
+            getOpStatDate = getOpStatDate `seq` getOpStatDate
+          , cacheMisses = cacheMisses `deepseq` cacheMisses
+          , cacheHits = cacheHits `deepseq` cacheHits
+        } `seq` ()
+-}
 
 -- | Parse and aggregate the log file input into a list of hourly GitOperationStats
 analyseGitOperations :: AggregationLevel -> Input -> [GitOperationStats]
@@ -94,6 +113,8 @@ protocolStats = foldl' aggregate emptyStats
               !date'  = if defaultDate == date then getDate logLine else date
           in ProtocolStats date' ssh' http'
     emptyStats = ProtocolStats defaultDate 0 0
+    defaultDate :: LogDate
+    defaultDate = def
 
 -- | Return the number of clone operations per repository
 
@@ -124,46 +145,37 @@ authenticatedGitOp line = isJust (getUsername line)
 
 collectRequestDurations :: Input -> (LogLine -> Bool) -> [RequestDurationStat]
 collectRequestDurations rawLines p = map m $ filter f $ parseLogLines rawLines
-        where clientIp line = head $ UT.split "," (S.unpack $ getRemoteAdress line)
-              ops           = [isClone, isFetch, isShallowClone, isPush, isRefAdvertisement]
-              f line        = isOutgoingLogLine line && p line && isGitOperation line
-              m line        =  let  duration    = fromMaybe 0 $ getRequestDuration line
-                                    zero        = replicate 5 0
-                                    inc op      = if op line then (+duration) else id
-                                    missOps     = map (inc . isUncachedOperation) ops
-                                    hitOps      = map (inc . isCachedOperation) ops
-                                    username'   = fromMaybe "-" $ getUsername line
-                                    !misses     = zipWith id missOps zero
-                                    !hits       = zipWith id hitOps zero
-                               in RequestDurationStat (getDate line) (clientIp line) misses hits username'
+  where
+    clientIp line = head $ S.split ',' (getRemoteAdress line)
+    ops           = [isClone, isFetch, isShallowClone, isPush, isRefAdvertisement]
+    f line        = isOutgoingLogLine line && p line && isGitOperation line
+    m line        =  let  duration    = fromMaybe 0 $ getRequestDuration line
+                          zero        = replicate 5 0
+                          inc op      = if op line then (+duration) else id
+                          missOps     = map (inc . isUncachedOperation) ops
+                          hitOps      = map (inc . isCachedOperation) ops
+                          username'   = fromMaybe "-" $ getUsername line
+                          misses      = zipWith id missOps zero
+                          hits        = zipWith id hitOps zero
+                          rd          = RequestDurationStat (getDate line) (clientIp line) misses hits username'
+                     in rd `deepseq` rd
 
-
-defaultDate :: LogDate
-defaultDate = def
 
 
 summarizeGitOperations :: [LogLine] -> Maybe GitOperationStats
 summarizeGitOperations = foldl' aggregate Nothing . filter isOutgoingLogLine
   where
     zero = replicate 5 0
-    aggregate Nothing logLine =
-      let ops         = [isClone, isFetch, isShallowClone, isPush, isRefAdvertisement]
-          inc op      = if op logLine then (+1) else (+0)
-          missOps     = map (inc . isUncachedOperation) ops
-          hitOps      = map (inc . isCachedOperation) ops
-          date'       = getDate logLine
-          misses'     = zipWith id missOps zero
-          hits'       = zipWith id hitOps zero
-          gos         = Just $ GitOperationStats date' misses' hits'
-      in gos `deepseq` gos
-    aggregate (Just (GitOperationStats date misses hits)) logLine =
+    aggregate Nothing logLine = acc (getDate logLine) zero zero logLine
+    aggregate (Just (GitOperationStats date misses hits)) logLine = acc date misses hits logLine
+    acc date' misses hits logLine =
       let ops         = [isClone, isFetch, isShallowClone, isPush, isRefAdvertisement]
           inc op      = if op logLine then (+1) else (+0)
           missOps     = map (inc . isUncachedOperation) ops
           hitOps      = map (inc . isCachedOperation) ops
           misses'     = zipWith id missOps misses
           hits'       = zipWith id hitOps hits
-          gos         = Just $ GitOperationStats date misses' hits'
+          gos         = Just $ GitOperationStats date' misses' hits'
       in gos `deepseq` gos
 
 -- | Return the repo slug from the logged action.

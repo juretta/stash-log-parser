@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings          #-}
 
 module Stash.Log.Parser
 ( Action(..)
@@ -21,6 +21,7 @@ import qualified Data.ByteString.Char8            as S
 import qualified Data.ByteString.Lazy.Char8       as L
 import           Data.Default
 import           Data.Maybe                       (mapMaybe)
+import           Stash.Log.Types
 import           Text.Printf                      (printf)
 
 type Input = [L.ByteString]
@@ -59,9 +60,11 @@ data LogLine = LogLine {
   , getAction          :: Action
   , getDetails         :: S.ByteString
   , getLabels          :: [S.ByteString]
-  , getRequestDuration :: Maybe Int
+  , getRequestDuration :: Maybe Millis
   , getSessionId       :: S.ByteString
 } deriving (Show, Eq)
+
+
 
 data LogDate = LogDate {
     getYear    :: !Int
@@ -122,8 +125,8 @@ parseLogEntryDate = do
     colon
     second <- decimal
     comma
-    millis <- decimal
-    return $ LogDate year month day hour minute second millis
+    millis' <- decimal
+    return $ LogDate year month day hour minute second millis'
 
 logEntry :: Parser S.ByteString
 logEntry = do
@@ -267,7 +270,7 @@ parseLine = do
     let labels = trim <$> S.split ',' labels_
         username = if rawUsername == "-" then Nothing else Just rawUsername
     return $ LogLine remoteAddress protocol requestId username date
-                    action details labels duration sessionId
+                    action details labels (Millis <$> duration) sessionId
 
 -- | Remove leading and trailing whitespace
 --

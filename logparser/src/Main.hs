@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Main where
 
-import           Control.Monad            (liftM)
 import           Control.Monad.Reader
 import           Prelude                  hiding (takeWhile)
 import           Stash.Log.Analyser
@@ -25,10 +24,10 @@ appShortDesc :: String
 appShortDesc = "Logparser for the Atlassian Stash access logs"
 
 data LogParserRunMode =
-                  MaxConn            {files :: [FilePath]}
+                  MaxConn           {files :: [FilePath]}
                 | CountRequests     {files :: [FilePath]}
                 | GitOperations     {files :: [FilePath], progressive :: Bool, graph :: Bool, targetDir :: FilePath, aggregationLevel :: AggregationLevel}
-                | GitDurations      {files :: [FilePath], progressive :: Bool}
+                | GitDurations      {files :: [FilePath], progressive :: Bool, graph :: Bool, targetDir :: FilePath}
                 | ProtocolStats     {files :: [FilePath]}
                 | RepositoryStats   {files :: [FilePath]}
                 | Count             {files :: [FilePath]}
@@ -60,7 +59,7 @@ gitOperations   = GitOperations {files = def &= args, progressive = progressiveF
                 &= name "gitOperations" &= help "Aggregate git operations per hour or minute. Show counts for fetch, clone, push, pull and ref advertisement"
 
 gitDurations :: LogParserRunMode
-gitDurations    = GitDurations {files = def &= args, progressive = progressiveFlags}
+gitDurations    = GitDurations {files = def &= args, progressive = progressiveFlags, graph = graphFlag, targetDir = outputDirFlag}
                 &= name "gitDurations"  &= help "Show the duration of git operations over time"
 
 protocolStats :: LogParserRunMode
@@ -94,10 +93,13 @@ run :: LogParserRunMode -> IO ()
 run (MaxConn files')                     = stream concurrentConnections printPlotDataConcurrentConn newRunConfig "printPlotDataConcurrentConn" files'
 run (CountRequests files')               = stream countRequestLines print newRunConfig "countRequestLines" files'
 run (GitOperations files' progressive' False _ lvl) = stream (G.analyseGitOperations lvl) printPlotDataGitOps (RunConfig progressive') "printPlotDataGitOps" files'
-run (GitOperations files' progressive' True targetDir lvl) = do
-    let outputF = generateChart "gitOperations" targetDir
+run (GitOperations files' progressive' True targetDir' lvl) = do
+    let outputF = generateGitOperationsChart "gitOperations" targetDir'
     stream (G.analyseGitOperations lvl) outputF (RunConfig progressive') "printPlotDataGitOps" files'
-run (GitDurations files' progressive')   = stream G.gitRequestDuration printGitRequestDurations (RunConfig progressive') "gitRequestDuration" files'
+run (GitDurations files' progressive' False _)   = stream G.gitRequestDuration printGitRequestDurations (RunConfig progressive') "gitRequestDuration" files'
+run (GitDurations files' progressive' True targetDir') = do
+    let outputF = generateGitDurationChart "gitDurations" targetDir'
+    stream G.gitRequestDuration outputF (RunConfig progressive') "printPlotDataGitOps" files'
 run (ProtocolStats files')               = stream G.protocolStatsByHour printProtocolData newRunConfig "printProtocolData" files'
 run (RepositoryStats files')             = stream G.repositoryStats printRepoStatsData newRunConfig "printRepoStatsData" files'
 run (Count files')                       = printCountLines countLines files'
@@ -112,7 +114,6 @@ main = do
     -- We need arguments so if there are no arguments given, invoke the help command
     config <- (if null options then withArgs ["--help"] else id) $ cmdArgsRun mode
     run config
-
 
 
 instance Default AggregationLevel where
