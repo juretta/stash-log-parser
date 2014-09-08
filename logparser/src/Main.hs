@@ -18,7 +18,7 @@ appName :: String
 appName = "logparser"
 
 appVersion :: String
-appVersion = "1.18"
+appVersion = "2.0"
 
 appShortDesc :: String
 appShortDesc = "Logparser for the Atlassian Stash access logs"
