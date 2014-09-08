@@ -52,24 +52,6 @@ task :package => :build do
   end
 end
 
-desc "Run Hlint on the sources"
-task :hlint => :build do
-  print `hlint src -c --report --utf8`
-end
-
-desc "Rebuild and copy the logparser into the cabal bin directory"
-task :rebuild => :build do
-  cabal 'copy'
-end
-
-
-desc "Run the tests"
-task :test do
-  ["clean", "install --only-dependencies --enable-tests", "configure --enable-tests", "build", "test"].each do |cmd|
-    cabal cmd
-  end
-end
-
 desc "Update version to the next minor version, tag the result"
 task :bump_minor_version do
   current_version = `git describe --tags`.strip.split("-").first.gsub(/^v/, '')
