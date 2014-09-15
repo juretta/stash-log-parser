@@ -26,17 +26,20 @@ import           System.FilePath                        ((</>))
 -- =================================================================================
 
 generateGitOperationsChart :: String -> FilePath -> [GitOperationStats] -> IO ()
-generateGitOperationsChart fileName targetDir xs = renderChart targetDir fileName (gitOperationsChart xs)
+generateGitOperationsChart fileName targetDir xs = do
+    -- show all operations in the same graph
+    renderChart targetDir fileName (gitOperationsChart xs)
+    -- cache hit/miss per operation type
+    mapM_ action [Clone, ShallowClone, Push, Fetch, RefAdvertisement]
+  where
+    action op' = renderChart targetDir (fileName ++ "-" ++ (show op')) (gitOperationsChart' op' xs)
 
 
 generateGitDurationChart :: String -> FilePath -> [RequestDurationStat] -> IO ()
 generateGitDurationChart fileName targetDir xs = do
-    renderChart targetDir (fileName ++ "-clone")             (gitDurationChart Clone xs)
-    renderChart targetDir (fileName ++ "-push")              (gitDurationChart Push xs)
-    renderChart targetDir (fileName ++ "-shallow-clone")     (gitDurationChart ShallowClone xs)
-    renderChart targetDir (fileName ++ "-fetch")             (gitDurationChart Fetch xs)
-    renderChart targetDir (fileName ++ "-rev-advertisement") (gitDurationChart RefAdvertisement xs)
-    return ()
+    mapM_ action [Clone, ShallowClone, Push, Fetch, RefAdvertisement]
+  where
+    action op' = renderChart targetDir (fileName ++ "-" ++ (show op')) (gitDurationChart op' xs)
 
 -- =================================================================================
 
@@ -70,13 +73,13 @@ gitDurationChart :: OperationType -> [RequestDurationStat] -> Renderable ()
 gitDurationChart op' xs =
         pointChart "Duration of Git Operations (in seconds)" (toLines op' xs)
   where
-     toLines _ []                = []
-     toLines Clone ys            = [Line ALeft "clone/cache hit" (extractClonesHit ys) green, Line ALeft "clone/cache miss" (extractClonesMiss ys) darkred ]
-     toLines ShallowClone ys     = [Line ALeft "shallow clone/cache hit" (extractShallowClonesHit ys) green
-                                  , Line ALeft "shallow clone/cache miss" (extractShallowClonesMiss ys) darkred ]
-     toLines Push ys             = [Line ALeft "push" (extractPushes ys) darkgray]
-     toLines Fetch ys            = [Line ALeft "fetch/cache hit" (extractFetchesHit ys) green, Line ALeft "fetch/cache miss" (extractFetchesMiss ys) darkred ]
-     toLines RefAdvertisement ys = [Line ALeft "ref advertisement/cache hit" (extractRefAdvertisementsHit ys) green, Line ALeft "ref advertisement/cache miss" (extractRefAdvertisementsMiss ys) darkred ]
+     toLines _ []                 = []
+     toLines Clone ys             = [Line ALeft "clone/cache hit" (extractClonesHit ys) green, Line ALeft "clone/cache miss" (extractClonesMiss ys) darkred ]
+     toLines ShallowClone ys      = [Line ALeft "shallow clone/cache hit" (extractShallowClonesHit ys) green
+                                   , Line ALeft "shallow clone/cache miss" (extractShallowClonesMiss ys) darkred ]
+     toLines Push ys              = [Line ALeft "push" (extractPushes ys) darkgray]
+     toLines Fetch ys             = [Line ALeft "fetch/cache hit" (extractFetchesHit ys) green, Line ALeft "fetch/cache miss" (extractFetchesMiss ys) darkred ]
+     toLines RefAdvertisement ys  = [Line ALeft "ref advertisement/cache hit" (extractRefAdvertisementsHit ys) green, Line ALeft "ref advertisement/cache miss" (extractRefAdvertisementsMiss ys) darkred ]
      extractClonesHit             = extractField 0 cacheHitDurations
      extractClonesMiss            = extractField 0 cacheMissDurations
      extractFetchesHit            = extractField 1 cacheHitDurations
@@ -92,24 +95,55 @@ gitDurationChart op' xs =
 
 gitOperationsChart :: [GitOperationStats] -> Renderable ()
 gitOperationsChart xs =
-        stackedWithLinesChart "Git Hosting Operations" (refLines xs) (toLines xs)
+    stackedWithLinesChart "Git Hosting Operations per hour" (refLines xs) (toLines xs)
   where
-     toLines []               = []
-     toLines ys               = [
-                                    Line ALeft "clone" (extractClones ys) blue
-                                  , Line ALeft "fetch" (extractFetches ys) darkorange
-                                  , Line ALeft "shallow clone" (extractShallowClones ys) green
-                                  , Line ALeft "push" (extractPushes ys) darkgray
-                                ]
-     refLines []              = []
-     refLines ys              = [Line ARight "ref advertisement" (extractRefAdvertisements ys) steelblue]
-     extractClones            = extractField 0
-     extractFetches           = extractField 1
-     extractShallowClones     = extractField 2
-     extractPushes            = extractField 3
-     extractRefAdvertisements = extractField 4
-     extractField x           = fmap (\GitOperationStats{..} -> (toLocalTime getOpStatDate, toDouble (cacheHits !! x + cacheMisses !! x)))
+    toLines []               = []
+    toLines ys               = [
+                                   Line ALeft "clone" (extractClones ys) blue
+                                 , Line ALeft "fetch" (extractFetches ys) darkorange
+                                 , Line ALeft "shallow clone" (extractShallowClones ys) green
+                                 , Line ALeft "push" (extractPushes ys) darkgray
+                               ]
+    refLines []              = []
+    refLines ys              = [Line ARight "ref advertisement" (extractRefAdvertisements ys) steelblue]
+    extractClones            = extractField 0
+    extractFetches           = extractField 1
+    extractShallowClones     = extractField 2
+    extractPushes            = extractField 3
+    extractRefAdvertisements = extractField 4
+    extractField x           = fmap (\GitOperationStats{..} -> (toLocalTime getOpStatDate, toDouble (cacheHits !! x + cacheMisses !! x)))
 
+gitOperationsChart' :: OperationType -> [GitOperationStats] -> Renderable ()
+gitOperationsChart' op' xs =
+    stackedWithLinesChart "Git Hosting Operations per hour" (sumLines op' xs) (toLines op' xs)
+  where
+    toLines _ []                = []
+    toLines Clone ys            = [Line ALeft "clone/cache hit" (extractClonesHit ys) green, Line ALeft "clone/cache miss" (extractClonesMiss ys) darkred ]
+    toLines ShallowClone ys     = [Line ALeft "shallow clone/cache hit" (extractShallowClonesHit ys) green
+                                 , Line ALeft "shallow clone/cache miss" (extractShallowClonesMiss ys) darkred ]
+    toLines Push ys             = [Line ALeft "push" (extractPushes ys) darkgray]
+    toLines Fetch ys            = [Line ALeft "fetch/cache hit" (extractFetchesHit ys) green, Line ALeft "fetch/cache miss" (extractFetchesMiss ys) darkred ]
+    toLines RefAdvertisement ys = [Line ALeft "ref advertisement/cache hit" (extractRefAdvertisementsHit ys) green, Line ALeft "ref advertisement/cache miss" (extractRefAdvertisementsMiss ys) darkred ]
+
+    sumLines Clone ys            = [Line ALeft "clone/cache hit" ((extractClonesHit ys) `add` (extractClonesMiss ys)) blue]
+    sumLines ShallowClone ys     = [Line ALeft "shallow clone/cache hit" (extractShallowClonesHit ys `add` extractShallowClonesMiss ys) blue]
+    sumLines Push ys             = []
+    sumLines Fetch ys            = [Line ALeft "fetch/cache hit" (extractFetchesHit ys `add` extractFetchesMiss ys) blue]
+    sumLines RefAdvertisement ys = [Line ALeft "ref advertisement" (extractRefAdvertisementsHit ys `add` extractRefAdvertisementsMiss ys) blue]
+
+    add xs ys                    = let zs = zip xs ys
+                                   in fmap (\((lk,lv),(_,rv)) -> (lk, lv + rv)) zs
+
+    extractClonesHit             = extractField 0 cacheHits
+    extractClonesMiss            = extractField 0 cacheMisses
+    extractFetchesHit            = extractField 1 cacheHits
+    extractFetchesMiss           = extractField 1 cacheMisses
+    extractShallowClonesHit      = extractField 2 cacheHits
+    extractShallowClonesMiss     = extractField 2 cacheMisses
+    extractPushes                = fmap (\GitOperationStats{..} -> (toLocalTime getOpStatDate, toDouble (cacheHits !! 3 + cacheMisses !! 3)))
+    extractRefAdvertisementsHit  = extractField 4 cacheHits
+    extractRefAdvertisementsMiss = extractField 4 cacheMisses
+    extractField x f             = fmap (\r@GitOperationStats{..} -> (toLocalTime getOpStatDate, toDouble ((f r) !! x)))
 
 -- colors :: [Colour Double]
 -- colors = cycle [blue, darkorange, green, darkred, darkgray, steelblue, yellow, black]
@@ -165,23 +199,29 @@ pointChart title lines' = do
 
 stackedWithLinesChart :: String -> [Line Double] -> [Line Double] -> Renderable ()
 stackedWithLinesChart title singleLines' lines' = do
-    let stacked = (toEither line) <$> lines'
-        single' = (toEither single) <$> singleLines' :: [Either (Plot LocalTime Double) (Plot LocalTime Double)]
-    toRenderable (layout $ single' ++ stacked)
+    let stacked  = (toEither line) <$> lines'
+        single'  = (toEither single) <$> singleLines' :: [Either (Plot LocalTime Double) (Plot LocalTime Double)]
+        xs       = single' ++ stacked
+        hasRight = any isRight xs
+    toRenderable (layout xs hasRight)
   where
     line col title' dat = plot_fillbetween_style .~ solidFillStyle (col `withOpacity` 0.4)
            $ plot_fillbetween_values .~ [ (d,(0,v)) | (d,v) <- dat]
            $ plot_fillbetween_title .~ title'
            $ def
-
+    isRight (Left _)  = False
+    isRight (Right _) = True
     single col title' dat = plot_lines_style .~ lineStyle col
            $ plot_lines_values .~ [dat]
            $ plot_lines_title .~ title'
            $ def
 
-    layout p = layoutlr_title .~ title
+    layout p showRight = layoutlr_title .~ title
            $ layoutlr_background .~ solidFillStyle (opaque white)
            $ layoutlr_left_axis_visibility . axis_show_ticks .~ False
+           $ layoutlr_right_axis_visibility . axis_show_line .~ showRight
+           $ layoutlr_right_axis_visibility . axis_show_ticks .~ False
+           $ layoutlr_right_axis_visibility . axis_show_labels .~ showRight
            $ layoutlr_plots .~ p
            $ setLayoutLRForeground (opaque black)
            $ def
