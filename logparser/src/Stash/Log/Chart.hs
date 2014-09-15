@@ -100,7 +100,7 @@ extractField f ot xs
 
 gitOperationsChart :: [GitOperationStats] -> Renderable ()
 gitOperationsChart xs =
-    stackedWithLinesChart "Git Hosting Operations per hour" (refLines xs) (toLines xs)
+    stackedWithLinesChart "Git Hosting Operations" (refLines xs) (toLines xs)
   where
     toLines []               = []
     toLines ys               = [
@@ -115,7 +115,7 @@ gitOperationsChart xs =
 
 gitOperationsChart' :: OperationType -> [GitOperationStats] -> Renderable ()
 gitOperationsChart' op' xs =
-    stackedWithLinesChart "Git Hosting Operations per hour" (sumLines op' xs) (toLines op' xs)
+    stackedWithLinesChart "Git Hosting Operations" (sumLines op' xs) (toLines op' xs)
   where
     toLines _ []                = []
     toLines Clone ys            = [Line ALeft "clone/cache hit" (f cacheHits Clone ys) green
