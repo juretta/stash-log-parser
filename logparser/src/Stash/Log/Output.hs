@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Stash.Log.Output
 ( printProtocolData
@@ -7,6 +8,7 @@ module Stash.Log.Output
 , printPlotDataGitOps
 , printCountLines
 , printRepoStatsData
+, printRequestClassification
 ) where
 
 
@@ -21,6 +23,16 @@ import           Text.Printf
 
 formatLogDateHour :: LogDate -> String
 formatLogDateHour date = printf "%04d-%02d-%02d %02d:%02d" (getYear date) (getMonth date) (getDay date) (getHour date) (getMinute date)
+
+printRequestClassification :: RequestClassification -> IO ()
+printRequestClassification RequestClassification{..} = do
+    let sum' = fromIntegral (gitHttp + gitSsh + webUi + fileServer + rest) :: Double
+    printf "RequestType | Count | Percent\n"
+    printf "Git HTTP | %d | %.2f\n"        gitHttp (fromIntegral gitHttp/sum')
+    printf "Git SSH | %d | %.2f\n"         gitSsh (fromIntegral gitSsh/sum')
+    printf "Web UI | %d | %.2f\n"          webUi (fromIntegral webUi/sum')
+    printf "File server | %d | %.2f\n"     fileServer (fromIntegral fileServer/sum')
+    printf "REST | %d | %.2f\n"            rest (fromIntegral rest/sum')
 
 printProtocolData :: [ProtocolStats] -> IO ()
 printProtocolData plotData = do

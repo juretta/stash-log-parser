@@ -5,6 +5,7 @@
 module Stash.Log.Chart (
     generateGitOperationsChart
   , generateGitDurationChart
+  , generateRequestClassificationChart
 ) where
 
 import           Control.Applicative
@@ -18,6 +19,7 @@ import           Graphics.Rendering.Chart
 import           Graphics.Rendering.Chart.Backend.Cairo
 import           Stash.Log.Common
 import           Stash.Log.GitOpsAnalyser
+import           Stash.Log.Analyser
 import           Stash.Log.Types
 import           System.Directory                       (createDirectoryIfMissing)
 import           System.FilePath                        ((</>))
@@ -40,6 +42,17 @@ generateGitDurationChart fileName targetDir xs =
     mapM_ action [Clone, ShallowClone, Push, Fetch, RefAdvertisement]
   where
     action op' = renderChart targetDir (fileName ++ "-" ++ show op') (gitDurationChart op' xs)
+
+generateRequestClassificationChart :: String -> FilePath -> RequestClassification -> IO ()
+generateRequestClassificationChart fileName targetDir RequestClassification{..} = do
+    let xs =  [
+               ("Git HTTP", gitHttp)
+             , ("Git SSH", gitSsh)
+             , ("Web UI", webUi)
+             , ("File Server", fileServer)
+             , ("REST", rest)
+            ]
+    renderChart targetDir fileName (pieChart xs)
 
 -- =================================================================================
 
@@ -140,34 +153,24 @@ gitOperationsChart' op' xs =
     extractPushes                = fmap (\GitOperationStats{..} -> (toLocalTime getOpStatDate, toDouble (cacheHits !! 3 + cacheMisses !! 3)))
     f fieldF                     = extractField (\x r@GitOperationStats{..} -> (toLocalTime getOpStatDate, toDouble (fieldF r !! x)))
 
--- colors :: [Colour Double]
--- colors = cycle [blue, darkorange, green, darkred, darkgray, steelblue, yellow, black]
 
+pieChart :: [(String, Integer)] -> Renderable ()
+pieChart values = toRenderable layout
+  where
+    pitem (s,v) = pitem_value .~ fromIntegral v
+                  $ pitem_label .~ s
+                  $ pitem_offset .~ 0
+                  $ def
 
--- chartLeftRight :: String -> [Line Double] -> Renderable ()
--- chartLeftRight title lines' = do
---     let plots = toEither line <$> lines'
---     toRenderable (layout plots)
---   where
---     layout p = layoutlr_title .~ title
---            $ layoutlr_background .~ solidFillStyle (opaque white)
---            $ layoutlr_left_axis_visibility . axis_show_ticks .~ False
---            $ layoutlr_plots .~ p
---            $ setLayoutLRForeground (opaque black)
---            $ def
---
---     line col title' dat = plot_lines_style .~ lineStyle col
---            $ plot_lines_values .~ [dat]
---            $ plot_lines_title .~ title'
---            $ def
---
---     lineStyle col = line_width .~ 1
---               $ line_color .~ opaque col
---               $ def
---
---
---
---
+    layout = pie_title .~ "Distribution of operations"
+           $ pie_plot . pie_data .~ map pitem values 
+           $ pie_plot . pie_colors  .~ fmap opaque colors
+           $ pie_plot . pie_label_style .~ (font_size .~ 20 $ def)
+           $ def
+
+    colors :: [Colour Double]
+    colors = cycle [darkgray, steelblue, orange, lightsteelblue, moccasin]
+
 pointChart :: String -> [Line LogValue] -> Renderable ()
 pointChart title lines' = do
     let plots = (\Line{..} -> toPlot $ points color lbl lineDataPoints) <$> lines' -- :: [(Plot LocalTime LogValue)]
@@ -243,14 +246,7 @@ toDouble = (1.0 *) . fromIntegral
 
 -- |
 --
--- >>> toMinutes (Millis 1200)
--- 2.0e-2
--- toMinutes :: Millis -> Double
--- toMinutes = (/ (60.0 * 1000)) . fromIntegral . millis
-
--- |
---
 -- >>> toSeconds (Millis 1200)
--- 12
+-- 1.2
 toSeconds :: Millis -> Double
 toSeconds = (/ 1000.0) . fromIntegral . millis

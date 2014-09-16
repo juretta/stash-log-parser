@@ -71,7 +71,7 @@ executable logparser
                           , deepseq
     ghc-options:
                             -Wall
-                            --Werror
+                            -Werror
                             -fno-warn-unused-do-bind
                             -fno-warn-orphans
                             -fno-warn-type-defaults

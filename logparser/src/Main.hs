@@ -31,6 +31,7 @@ data LogParserRunMode =
                 | ProtocolStats     {files :: [FilePath]}
                 | RepositoryStats   {files :: [FilePath]}
                 | Count             {files :: [FilePath]}
+                | Classification    {files :: [FilePath], graph :: Bool, targetDir :: FilePath}
                 | DebugParser       {files :: [FilePath], progressive :: Bool}
              deriving (Data,Typeable,Show,Eq)
 
@@ -71,6 +72,12 @@ repositoryStats = RepositoryStats {files = def &= args}
                 &= name "repositoryStats" &= help "Show the number of git clone \
                     \operations per repository"
 
+requestClassification :: LogParserRunMode
+requestClassification = Classification {files = def &= args, graph = graphFlag, targetDir = outputDirFlag}
+                        &= name "requestClassification" &= help "Classify the different request types (REST, FileServer, Web UI, Git HTTP, Git SSH)"
+
+
+
 count :: LogParserRunMode
 count           = Count {files = def &= args}
                 &= name "count"         &= help "Count the number of lines in the given logfile(s)"
@@ -82,7 +89,7 @@ debugParser     = DebugParser {files = def &= args, progressive = progressiveFla
 
 mode :: Mode (CmdArgs LogParserRunMode)
 mode = cmdArgsMode $ modes [maxConn, countRequests, gitOperations, gitDurations,
-                            protocolStats, repositoryStats, count, debugParser]
+                            protocolStats, repositoryStats, requestClassification, count, debugParser]
         &= help appShortDesc
         &= helpArg [explicit, name "help", name "h"]
         &= program appName &= summary (appName ++ " " ++ appVersion)
@@ -100,6 +107,10 @@ run (GitDurations files' progressive' False _)   = stream G.gitRequestDuration p
 run (GitDurations files' progressive' True targetDir') = do
     let outputF = generateGitDurationChart "gitDurations" targetDir'
     stream G.gitRequestDuration outputF (RunConfig progressive') "printPlotDataGitOps" files'
+run (Classification files' True targetDir') = do
+    let outputF = generateRequestClassificationChart "requestClassification" targetDir'
+    stream classifyRequests outputF newRunConfig "classifyRequests" files'
+run (Classification files' False _)      = stream classifyRequests printRequestClassification newRunConfig "classifyRequests" files'
 run (ProtocolStats files')               = stream G.protocolStatsByHour printProtocolData newRunConfig "printProtocolData" files'
 run (RepositoryStats files')             = stream G.repositoryStats printRepoStatsData newRunConfig "printRepoStatsData" files'
 run (Count files')                       = printCountLines countLines files'
