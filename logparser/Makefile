@@ -26,11 +26,12 @@ setup: clean
 	cabal configure
 
 profile: clean
-	cabal configure --enable-library-profiling --enable-executable-profiling --enable-benchmarks
+	cabal configure --enable-library-profiling --enable-executable-profiling --enable-benchmarks --flags=profiling
 	cabal build
 
 charts:
 	hp2ps -c -M logparser.hp
+	ps2pdf logparser.ps
 
 hlint:
 	hlint src -c --report --utf8

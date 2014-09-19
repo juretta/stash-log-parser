@@ -15,6 +15,11 @@ source-repository head
   type:     git
   location: git@bitbucket.org:ssaasen/stash-log-parser.git
 
+
+Flag Profiling
+  Description: Enable profiling options
+  Default:     False
+
 test-suite logparser-testsuite
   type:                     exitcode-stdio-1.0
   main-is:                  Properties.hs
@@ -78,7 +83,9 @@ executable logparser
                             -fno-warn-type-defaults
                             -rtsopts
                             -O2
-                            --auto-all -caf-all -fforce-recomp
+    if flag(profiling)
+        ghc-options:
+                            -auto-all -caf-all -fforce-recomp
     if os(linux)
         ghc-options:
                             -static -optc-static -optl-static -optl-pthread
