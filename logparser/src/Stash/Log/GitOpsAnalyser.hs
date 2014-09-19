@@ -29,6 +29,7 @@ import           Data.Default
 import           Data.Function         (on)
 import           Data.List             (foldl', groupBy, sortBy)
 import           Data.Maybe            (mapMaybe, fromMaybe)
+import qualified Data.HashMap.Strict   as Map
 import           Stash.Log.Common
 import           Stash.Log.Parser
 import           Stash.Log.Types
@@ -111,16 +112,13 @@ protocolStats = foldl' aggregate emptyStats
 -- | Return the number of clone operations per repository
 repositoryStats :: Input -> [RepositoryStat]
 repositoryStats xs =
-    let gitOps        = filter (\l -> isGitOperation l && isClone l) $ parseLogLines xs
-        perRepo       = groupByRepo $ sortBy (compare `on` repoSlug) gitOps
-    in  sortBy (flip compare `on` getNumberOfClones) $ map t perRepo
+    let gitOps         = filter (\l -> isGitOperation l && isClone l) $ parseLogLines xs
+        repoToCloneMap = foldl' f Map.empty gitOps
+    in  sortBy (flip compare `on` getNumberOfClones) $ fmap t $ Map.toList repoToCloneMap
   where
-    groupByRepo      = groupBy ((==) `on` repoSlug)
-    repoSlug         = lower . extractRepoSlug . getAction
-    lower            = fmap (S.map toLower)
-    t []             = StatUnavailable
-    t logLines@(x:_) = RepositoryStat (fromMaybe "n/a" (repoSlug x)) (length logLines)
-
+    f map' line      = Map.insertWith (+) (repoSlug line) 1 map'
+    repoSlug         = fmap (S.map toLower) . extractRepoSlug . getAction
+    t (k,v)          = RepositoryStat (fromMaybe "n/a" k) v
 
 
 -- =================================================================================
