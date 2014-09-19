@@ -28,7 +28,8 @@ data LogParserRunMode =
                   MaxConn           {files :: [FilePath], graph :: Bool, targetDir :: FilePath}
                 | CountRequests     {files :: [FilePath]}
                 | GitOperations     {files :: [FilePath], graph :: Bool, targetDir :: FilePath, aggregationLevel :: AggregationLevel}
-                | GitDurations      {files :: [FilePath], graph :: Bool, targetDir :: FilePath}
+                | GitDurations      {files :: [FilePath], targetDir :: FilePath}
+            --  | GitDurations      {files :: [FilePath], graph :: Bool, targetDir :: FilePath}
                 | ProtocolStats     {files :: [FilePath], graph :: Bool, targetDir :: FilePath}
                 | RepositoryStats   {files :: [FilePath], graph :: Bool, targetDir :: FilePath}
                 | Count             {files :: [FilePath]}
@@ -60,7 +61,7 @@ gitOperations   = GitOperations {files = def &= args, graph = graphFlag, targetD
                 &= name "gitOperations" &= help "Aggregate git operations per hour or minute. Show counts for fetch, clone, push, pull and ref advertisement"
 
 gitDurations :: LogParserRunMode
-gitDurations    = GitDurations {files = def &= args, graph = graphFlag, targetDir = outputDirFlag}
+gitDurations    = GitDurations {files = def &= args, targetDir = outputDirFlag}
                 &= name "gitDurations"  &= help "Show the duration of git operations over time"
 
 protocolStats :: LogParserRunMode
@@ -89,7 +90,7 @@ allOps = All {files = def &= args, targetDir = outputDirFlag, aggregationLevel =
       &= name "all" &= help "Generate all available graphs for the given input files"
 
 mode :: Mode (CmdArgs LogParserRunMode)
-mode = cmdArgsMode $ modes [maxConn, countRequests, gitOperations, gitDurations,
+mode = cmdArgsMode $ modes [maxConn, countRequests, gitOperations, gitDurations, -- // chart generation is currently disabled as it is too slow
                             protocolStats, repositoryStats, requestClassification, count, debugParser, allOps &= auto]
         &= help appShortDesc
         &= helpArg [explicit, name "help", name "h"]
@@ -103,8 +104,8 @@ run (MaxConn files' True targetDir')             = genMaxConnectionChart targetD
 run (CountRequests files')                       = stream countRequestLines print files'
 run (GitOperations files' False _ lvl)           = stream (G.analyseGitOperations lvl) printPlotDataGitOps files'
 run (GitOperations files' True targetDir' lvl)   = genGitOperationsChart lvl targetDir' files'
-run (GitDurations files' False _)                = stream G.gitRequestDuration printGitRequestDurations files'
-run (GitDurations files' True targetDir')        = genGitDurationChart targetDir' files'
+run (GitDurations files'       _)                = stream G.gitRequestDuration printGitRequestDurations files'
+{-run (GitDurations files' targetDir')             = genGitDurationChart targetDir' files'-}
 run (Classification files' True targetDir')      = genRequestClassificationChart targetDir' files'
 run (Classification files' False _)              = stream classifyRequests printRequestClassification files'
 run (ProtocolStats files' False _)               = stream G.protocolStatsByHour printProtocolData files'
@@ -116,7 +117,7 @@ run (DebugParser files')                         = stream showLines print files'
 run (All files' targetDir' lvl)                  = do
   let actions = [genMaxConnectionChart
                 , genGitOperationsChart lvl
-                , genGitDurationChart
+                -- , genGitDurationChart
                 , genRequestClassificationChart
                 , genProtocolStatsGraph,
                 genRepositoryStatsGraph]
