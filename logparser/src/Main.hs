@@ -29,7 +29,7 @@ data LogParserRunMode =
                 | GitOperations     {files :: [FilePath], progressive :: Bool, graph :: Bool, targetDir :: FilePath, aggregationLevel :: AggregationLevel}
                 | GitDurations      {files :: [FilePath], progressive :: Bool, graph :: Bool, targetDir :: FilePath}
                 | ProtocolStats     {files :: [FilePath], graph :: Bool, targetDir :: FilePath}
-                | RepositoryStats   {files :: [FilePath]}
+                | RepositoryStats   {files :: [FilePath], graph :: Bool, targetDir :: FilePath}
                 | Count             {files :: [FilePath]}
                 | Classification    {files :: [FilePath], graph :: Bool, targetDir :: FilePath}
                 | DebugParser       {files :: [FilePath], progressive :: Bool}
@@ -68,7 +68,7 @@ protocolStats   = ProtocolStats {files = def &= args, graph = graphFlag, targetD
                 &= name "protocolStats" &= help "Aggregate the number of git operations per hour based on the access protocol (http(s) vs. SSH)"
 
 repositoryStats :: LogParserRunMode
-repositoryStats = RepositoryStats {files = def &= args}
+repositoryStats = RepositoryStats {files = def &= args, graph = graphFlag, targetDir = outputDirFlag}
                 &= name "repositoryStats" &= help "Show the number of git clone \
                     \operations per repository"
 
@@ -116,7 +116,10 @@ run (ProtocolStats files' False _)       = stream G.protocolStatsByHour printPro
 run (ProtocolStats files' True targetDir') = do
     let outputF = generateProtocolStats "protocolStats" targetDir'
     stream G.protocolStatsByHour outputF newRunConfig "protocolStats" files'
-run (RepositoryStats files')             = stream G.repositoryStats printRepoStatsData newRunConfig "printRepoStatsData" files'
+run (RepositoryStats files' False _)     = stream G.repositoryStats printRepoStatsData newRunConfig "printRepoStatsData" files'
+run (RepositoryStats files' True targetDir') = do
+    let outputF = generateRepositoryStats "repositoryStats" targetDir'
+    stream G.repositoryStats outputF newRunConfig "repositoryStats" files'
 run (Count files')                       = printCountLines countLines files'
 run (DebugParser files' progressive')    = stream showLines print (RunConfig progressive') "showLines" files'
 

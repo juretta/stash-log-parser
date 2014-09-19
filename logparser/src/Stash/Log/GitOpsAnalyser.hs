@@ -56,6 +56,11 @@ data ProtocolStats = ProtocolStats {
   , getHttp            :: !Int
 }
 
+data RepositoryStat = RepositoryStat {
+    getName           :: S.ByteString
+  , getNumberOfClones :: Int
+} | StatUnavailable deriving (Show)
+
 instance NFData GitOperationStats where
     rnf gos@GitOperationStats{..} =
         gos {
@@ -117,12 +122,6 @@ protocolStats = foldl' aggregate emptyStats
     defaultDate = def
 
 -- | Return the number of clone operations per repository
-
-data RepositoryStat = RepositoryStat {
-    getName           :: S.ByteString
-  , getNumberOfClones :: Int
-} | StatUnavailable deriving (Show)
-
 repositoryStats :: Input -> [RepositoryStat]
 repositoryStats xs =
     let gitOps        = filter (\l -> isGitOperation l && isClone l) $ parseLogLines xs

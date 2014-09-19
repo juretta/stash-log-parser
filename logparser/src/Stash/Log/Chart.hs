@@ -8,20 +8,26 @@ module Stash.Log.Chart (
   , generateRequestClassificationChart
   , generateMaxConnectionChart
   , generateProtocolStats
+  , generateRepositoryStats
 ) where
+
 
 import           Control.Applicative
 import           Control.DeepSeq
 import           Control.Lens
+import qualified Data.ByteString.Char8                  as S
 import           Data.Colour
+import           Data.Colour.SRGB
 import           Data.Colour.Names
 import           Data.Default.Class
+import           Data.Function                          (on)
+import           Data.List                              (sortBy)
 import           Data.Time.LocalTime
 import           Graphics.Rendering.Chart
 import           Graphics.Rendering.Chart.Backend.Cairo
+import           Stash.Log.Analyser
 import           Stash.Log.Common
 import           Stash.Log.GitOpsAnalyser
-import           Stash.Log.Analyser
 import           Stash.Log.Types
 import           System.Directory                       (createDirectoryIfMissing)
 import           System.FilePath                        ((</>))
@@ -54,7 +60,7 @@ generateRequestClassificationChart fileName targetDir RequestClassification{..} 
              , ("File Server", fileServer)
              , ("REST", rest)
             ]
-    renderChart targetDir fileName (pieChart xs)
+    renderChart targetDir fileName (pieChart "Distribution of operations" xs)
 
 
 generateMaxConnectionChart :: String -> FilePath -> [DateValuePair] -> IO ()
@@ -70,6 +76,17 @@ generateProtocolStats fileName targetDir xs = renderChart targetDir fileName (li
         Line ALeft "http(s)" (fmap (\ProtocolStats{..} -> (toLocalTime getProtocolLogDate, fromIntegral getHttp)) xs') green
       , Line ALeft "ssh" (fmap (\ProtocolStats{..} -> (toLocalTime getProtocolLogDate, fromIntegral getSsh)) xs') red
       ]
+
+
+generateRepositoryStats :: String -> FilePath -> [RepositoryStat] -> IO ()
+generateRepositoryStats fileName targetDir xs = do
+    let ys = fmap (\RepositoryStat{..} -> (S.unpack getName ++ " (" ++ show getNumberOfClones ++ ")", fromIntegral getNumberOfClones)) $ take 10 $
+             sortBy (flip (compare `on` getNumberOfClones)) (filter statAvailable xs)
+    renderChart targetDir fileName (pieChart "Top 10 repositories by number of clones" ys)
+  where
+    statAvailable StatUnavailable = False
+    statAvailable _               = True
+
 -- =================================================================================
 
 data OperationType = Clone | ShallowClone | Fetch | Push | RefAdvertisement deriving (Eq, Show)
@@ -170,22 +187,21 @@ gitOperationsChart' op' xs =
     f fieldF                     = extractField (\x r@GitOperationStats{..} -> (toLocalTime getOpStatDate, toDouble (fieldF r !! x)))
 
 
-pieChart :: [(String, Integer)] -> Renderable ()
-pieChart values = toRenderable layout
+pieChart :: String -> [(String, Integer)] -> Renderable ()
+pieChart title values = toRenderable layout
   where
     pitem (s,v) = pitem_value .~ fromIntegral v
                   $ pitem_label .~ s
                   $ pitem_offset .~ 0
                   $ def
 
-    layout = pie_title .~ "Distribution of operations"
+    layout = pie_title .~ title
            $ pie_plot . pie_data .~ map pitem values
            $ pie_plot . pie_colors  .~ fmap opaque colors
-           $ pie_plot . pie_label_style .~ (font_size .~ 20 $ def)
+           $ pie_plot . pie_label_style .~ (font_size .~ 16 $ def)
+           $ pie_margin .~ 106.0
            $ def
 
-    colors :: [Colour Double]
-    colors = cycle [darkgray, steelblue, orange, lightsteelblue, moccasin]
 
 pointChart :: String -> [Line LogValue] -> Renderable ()
 pointChart title lines' = do
@@ -272,6 +288,39 @@ renderChart targetDir filename rend = do
     _ <- renderableToFile (FileOptions (1200,800) PDF) rend (targetDir </> filename ++ ".pdf")
     return ()
 
+
+colors :: [Colour Double]
+colors = cycle [mightySlate, pacifica, appleChic, cherryPink, grandmasPillow, banquette, strawberrySugar, cremeDeLaCreme, powderPuff, charlotte]
+
+
+
+mightySlate, pacifica, appleChic, cherryPink, grandmasPillow, banquette, strawberrySugar,
+  cremeDeLaCreme, powderPuff, charlotte :: Colour Double
+mightySlate = sRGB' 85.0 98.0 112.0
+
+pacifica = sRGB' 78.0 205.0 196.0
+
+appleChic = sRGB' 199.0 244.0 100.0
+
+cherryPink = sRGB' 255.0 107.0 107.0
+
+grandmasPillow = sRGB' 196.0 77.0 88.0
+
+banquette = sRGB' 119.0 79.0 56.0
+
+strawberrySugar = sRGB' 224.0 142.0 121.0
+
+cremeDeLaCreme = sRGB' 241.0 212.0 175.0
+
+powderPuff = sRGB' 236.0 229.0 206.0
+
+charlotte = sRGB' 197.0 224.0 220.0
+
+sRGB' :: Double -> Double -> Double -> Colour Double
+sRGB' a b c = sRGB (toR a) (toR b) (toR c)
+
+toR :: Double -> Double
+toR i = i/255.0
 
 toDouble :: Int -> Double
 toDouble = (1.0 *) . fromIntegral
