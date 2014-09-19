@@ -101,8 +101,8 @@ protocolStats :: [LogLine] -> ProtocolStats
 protocolStats = foldl' aggregate emptyStats
   where
     aggregate (ProtocolStats date ssh http) logLine =
-          let !ssh'   = if isSsh logLine then ssh + 1 else ssh
-              !http'  = if isHttp logLine then http + 1 else http
+          let !ssh'   = if isSsh logLine then succ ssh else ssh
+              !http'  = if isHttp logLine then succ http else http
               !date'  = if defaultDate == date then getDate logLine else date
           in ProtocolStats date' ssh' http'
     emptyStats = ProtocolStats defaultDate 0 0

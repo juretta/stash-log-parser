@@ -12,7 +12,6 @@ module Stash.Log.Input
 
 import qualified Codec.Compression.BZip     as BZip
 import           Control.Monad              (liftM)
-import qualified Data.ByteString.Char8      as S
 import qualified Data.ByteString.Lazy.Char8 as L
 import           Data.List                  (isSuffixOf, sortBy)
 import           Data.Monoid                (mappend)
