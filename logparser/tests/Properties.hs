@@ -293,37 +293,6 @@ test_sortFilesAsc = H.assertEqual
                      "atlassian-stash-access.log",
                      "atlassian-stash-access-2012-11-29.2.log.bz2"]
 
-
-test_filterFilesDropLast = H.assertEqual
-    "Should drop the last day"
-    ["atlassian-stash-access-2012-11-28.0.log.bz2",
-     "atlassian-stash-access-2012-11-29.0.log.bz2",
-     "atlassian-stash-access-2012-11-29.1.log.bz2"]
-     (filterLastDay input)
-    where input = ["atlassian-stash-access-2012-11-28.0.log.bz2",
-                     "atlassian-stash-access-2012-11-29.0.log.bz2",
-                     "atlassian-stash-access-2012-11-29.1.log.bz2",
-                     "atlassian-stash-access-2012-11-30.0.log.bz2",
-                     "atlassian-stash-access-2012-11-30.1.log.bz2",
-                     "atlassian-stash-access.log"]
-
-test_filterFilesSkipUntilDate = H.assertEqual
-    "Should drop files up to the given date"
-    ["atlassian-stash-access-2012-11-30.0.log.bz2",
-     "atlassian-stash-access-2012-11-30.1.log.bz2",
-     "atlassian-stash-access-2012-11-31.0.log.bz2",
-     "atlassian-stash-access-2012-11-31.1.log.bz2",
-     "atlassian-stash-access.log"]
-     (dropUntilDate "2012-11-30" input)
-    where input = ["atlassian-stash-access-2012-11-28.0.log.bz2",
-                     "atlassian-stash-access-2012-11-29.0.log.bz2",
-                     "atlassian-stash-access-2012-11-29.1.log.bz2",
-                     "atlassian-stash-access-2012-11-30.0.log.bz2",
-                     "atlassian-stash-access-2012-11-30.1.log.bz2",
-                     "atlassian-stash-access-2012-11-31.0.log.bz2",
-                     "atlassian-stash-access-2012-11-31.1.log.bz2",
-                     "atlassian-stash-access.log"]
-
 ------------------------------------------------------------------------
 -- Test harness
 
@@ -351,8 +320,6 @@ tests =
       testGroup "Files"
       [
         testCase "files/sortLogFiles" test_sortFilesAsc
-       ,testCase "files/drop last day" test_filterFilesDropLast
-       ,testCase "files/skip until date" test_filterFilesSkipUntilDate
       ],
       testGroup "parser"
       [ testCase "parser/parse empty String" test_logLineParserEmpty

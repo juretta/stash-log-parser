@@ -11,7 +11,6 @@ import           Text.Printf
 
 data AggregationLevel = Hour | Minute deriving (Data,Typeable,Show,Eq)
 
-
 newtype Millis = Millis {
   millis :: Int
 } deriving (Num, Eq, Ord, PrintfArg)

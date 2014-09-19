@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module Stash.Log.Output
 ( printProtocolData
@@ -16,7 +16,7 @@ import qualified Data.ByteString.Char8      as S
 import qualified Data.ByteString.Lazy.Char8 as L
 import           Stash.Log.Analyser
 import           Stash.Log.GitOpsAnalyser
-import           Stash.Log.Input
+import           Stash.Log.Input            (readFiles)
 import           Stash.Log.Parser
 import           Text.Printf
 
@@ -71,5 +71,3 @@ formatLogDate :: LogDate -> String
 formatLogDate date = printf "%04d-%02d-%02d %02d:%02d" (getYear date) (getMonth date)
                             (getDay date) (getHour date) (getMinute date)
 
-
--- instance PrintfArg Millis where
