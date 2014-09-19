@@ -24,7 +24,7 @@ appShortDesc :: String
 appShortDesc = "Logparser for the Atlassian Stash access logs"
 
 data LogParserRunMode =
-                  MaxConn           {files :: [FilePath]}
+                  MaxConn           {files :: [FilePath], graph :: Bool, targetDir :: FilePath}
                 | CountRequests     {files :: [FilePath]}
                 | GitOperations     {files :: [FilePath], progressive :: Bool, graph :: Bool, targetDir :: FilePath, aggregationLevel :: AggregationLevel}
                 | GitDurations      {files :: [FilePath], progressive :: Bool, graph :: Bool, targetDir :: FilePath}
@@ -48,7 +48,7 @@ aggregationLevelFlag :: AggregationLevel
 aggregationLevelFlag = def &= help "Values will be aggregated by hour (default) or by minute" &= opt Hour &= groupname "Statistics" &= explicit &= name "level" &= typ "Hour|Minute"
 
 maxConn :: LogParserRunMode
-maxConn         = MaxConn {files = def &= args}
+maxConn         = MaxConn {files = def &= args, graph = graphFlag, targetDir = outputDirFlag}
                 &= name "maxConn"       &= help "Show the maximum number of concurrent requests per hour"
 
 countRequests :: LogParserRunMode
@@ -97,7 +97,10 @@ mode = cmdArgsMode $ modes [maxConn, countRequests, gitOperations, gitDurations,
 
 
 run :: LogParserRunMode -> IO ()
-run (MaxConn files')                     = stream concurrentConnections printPlotDataConcurrentConn newRunConfig "printPlotDataConcurrentConn" files'
+run (MaxConn files' False _)             = stream concurrentConnections printPlotDataConcurrentConn newRunConfig "printPlotDataConcurrentConn" files'
+run (MaxConn files' True targetDir')     = do
+    let outputF = generateMaxConnectionChart "maxConnection" targetDir'
+    stream concurrentConnections outputF newRunConfig "maxConnection" files'
 run (CountRequests files')               = stream countRequestLines print newRunConfig "countRequestLines" files'
 run (GitOperations files' progressive' False _ lvl) = stream (G.analyseGitOperations lvl) printPlotDataGitOps (RunConfig progressive') "printPlotDataGitOps" files'
 run (GitOperations files' progressive' True targetDir' lvl) = do

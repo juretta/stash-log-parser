@@ -6,6 +6,7 @@ module Stash.Log.Chart (
     generateGitOperationsChart
   , generateGitDurationChart
   , generateRequestClassificationChart
+  , generateMaxConnectionChart
 ) where
 
 import           Control.Applicative
@@ -53,6 +54,13 @@ generateRequestClassificationChart fileName targetDir RequestClassification{..} 
              , ("REST", rest)
             ]
     renderChart targetDir fileName (pieChart xs)
+
+
+generateMaxConnectionChart :: String -> FilePath -> [DateValuePair] -> IO ()
+generateMaxConnectionChart fileName targetDir xs = renderChart targetDir fileName (stackedWithLinesChart "Conncurrent Connections" [] $ toLines xs)
+  where
+    toLines xs = [Line ALeft "max concurrent connections" (fmap (\DateValuePair{..} -> (toLocalTime getLogDate, fromIntegral getValue)) xs) blue]
+
 
 -- =================================================================================
 
