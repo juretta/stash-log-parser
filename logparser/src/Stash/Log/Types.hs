@@ -8,6 +8,7 @@ module Stash.Log.Types (
 
 import           Data.Data
 import           Text.Printf
+import           Control.DeepSeq
 
 data AggregationLevel = Hour | Minute deriving (Data,Typeable,Show,Eq)
 
@@ -17,3 +18,6 @@ newtype Millis = Millis {
 
 instance Show Millis where
     show (Millis s) = show s
+
+instance NFData Millis where
+    rnf (Millis m) = m `seq` ()

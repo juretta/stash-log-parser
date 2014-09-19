@@ -99,7 +99,7 @@ data Anchor = ALeft | ARight deriving (Eq, Show)
 
 data Line a = Line {
     anchor         :: !Anchor
-  , lbl            :: !String
+  , lbl            :: !S.ByteString
   , lineDataPoints :: Data a
   , color          :: Colour Double
 } deriving (Eq, Show)
@@ -218,7 +218,7 @@ pointChart title lines' = do
     {-points :: Colour LogValue -> String -> Data LogValue -> PlotPoints LocalTime LogValue-}
     points col title' dat = plot_points_style .~ filledCircles 1 (opaque col)
            $ plot_points_values .~ dat
-           $ plot_points_title .~ title'
+           $ plot_points_title .~ (S.unpack title')
            $ def
 
 linesChart :: (PlotValue a) => String -> [Line a] -> Renderable ()
@@ -228,7 +228,7 @@ linesChart title lines' = do
   where
     single col title' dat = plot_lines_style .~ lineStyle col
            $ plot_lines_values .~ [dat]
-           $ plot_lines_title .~ title'
+           $ plot_lines_title .~ (S.unpack title')
            $ def
 
     layout p = layout_title .~ title
@@ -251,13 +251,13 @@ stackedWithLinesChart title singleLines' lines' = do
   where
     line col title' dat = plot_fillbetween_style .~ solidFillStyle (col `withOpacity` 0.4)
            $ plot_fillbetween_values .~ [ (d,(0,v)) | (d,v) <- dat]
-           $ plot_fillbetween_title .~ title'
+           $ plot_fillbetween_title .~ (S.unpack title')
            $ def
     isRight (Left _)  = False
     isRight (Right _) = True
     single col title' dat = plot_lines_style .~ lineStyle col
            $ plot_lines_values .~ [dat]
-           $ plot_lines_title .~ title'
+           $ plot_lines_title .~ (S.unpack title')
            $ def
 
     layout p showRight = layoutlr_title .~ title
@@ -274,7 +274,7 @@ stackedWithLinesChart title singleLines' lines' = do
               $ line_color .~ opaque col
               $ def
 
-toEither :: ToPlot a => (Colour Double -> String -> Data t -> a x y)
+toEither :: ToPlot a => (Colour Double -> S.ByteString -> Data t -> a x y)
                   -> Line t -> Either (Plot x y) (Plot x y)
 toEither f (Line ALeft lbl points col) = Left (toPlot $ f col lbl points)
 toEither f (Line ARight lbl points col) = Right (toPlot $ f col lbl points)

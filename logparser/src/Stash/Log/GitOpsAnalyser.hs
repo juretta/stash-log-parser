@@ -27,9 +27,8 @@ import qualified Data.ByteString.Char8 as S
 import           Data.Char             (toLower)
 import           Data.Default
 import           Data.Function         (on)
-import           Data.List             (foldl', groupBy, isPrefixOf, sortBy)
+import           Data.List             (foldl', groupBy, sortBy)
 import           Data.Maybe            (mapMaybe, fromMaybe)
-import qualified Data.String.Utils     as UT
 import           Stash.Log.Common
 import           Stash.Log.Parser
 import           Stash.Log.Types
@@ -57,8 +56,8 @@ data ProtocolStats = ProtocolStats {
 }
 
 data RepositoryStat = RepositoryStat {
-    getName           :: S.ByteString
-  , getNumberOfClones :: Int
+    getName           :: !S.ByteString
+  , getNumberOfClones :: !Int
 } | StatUnavailable deriving (Show)
 
 instance NFData GitOperationStats where
@@ -69,9 +68,6 @@ instance NFData GitOperationStats where
           , cacheHits = cacheHits `deepseq` cacheHits
         } `seq` ()
 
-instance NFData Millis where
-    rnf (Millis m) = m `seq` ()
-
 instance NFData RequestDurationStat where
     rnf rd@RequestDurationStat{..} =
         rd {
@@ -81,15 +77,6 @@ instance NFData RequestDurationStat where
           , cacheHitDurations = cacheHitDurations `deepseq` cacheHitDurations
           , requestUsername = requestUsername `seq` requestUsername
         } `seq` ()
-{-
-instance NFData GitOperationStats where
-    rnf gos@GitOperationStats{..} =
-        gos {
-            getOpStatDate = getOpStatDate `seq` getOpStatDate
-          , cacheMisses = cacheMisses `deepseq` cacheMisses
-          , cacheHits = cacheHits `deepseq` cacheHits
-        } `seq` ()
--}
 
 -- | Parse and aggregate the log file input into a list of hourly GitOperationStats
 analyseGitOperations :: AggregationLevel -> Input -> [GitOperationStats]
@@ -126,14 +113,13 @@ repositoryStats :: Input -> [RepositoryStat]
 repositoryStats xs =
     let gitOps        = filter (\l -> isGitOperation l && isClone l) $ parseLogLines xs
         perRepo       = groupByRepo $ sortBy (compare `on` repoSlug) gitOps
-        sortedPerRepo = sortBy (flip compare `on` getNumberOfClones) $ map t perRepo
-    in  sortedPerRepo
+    in  sortBy (flip compare `on` getNumberOfClones) $ map t perRepo
   where
     groupByRepo      = groupBy ((==) `on` repoSlug)
     repoSlug         = lower . extractRepoSlug . getAction
-    lower            = fmap (map toLower)
+    lower            = fmap (S.map toLower)
     t []             = StatUnavailable
-    t logLines@(x:_) = RepositoryStat (S.pack $ fromMaybe "n/a" (repoSlug x)) (length logLines)
+    t logLines@(x:_) = RepositoryStat (fromMaybe "n/a" (repoSlug x)) (length logLines)
 
 
 
@@ -180,10 +166,10 @@ summarizeGitOperations = foldl' aggregate Nothing . filter isOutgoingLogLine
 --
 -- E.g. for "GET /scm/CONF/confluence.git/info/refs HTTP/1.1" this would return:
 --      "/CONF/confluence.git"
-extractRepoSlug :: Action -> Maybe String
+extractRepoSlug :: Action -> Maybe S.ByteString
 extractRepoSlug action =
-    let elems = UT.split ("/" :: String) (S.unpack $ getPath action)
-        f     = takeWhile (\s -> s /= "info" && not ("git" `isPrefixOf` s)) . dropWhile (`elem` ["", "scm", "git"])
-    in Just $ '/' : UT.join "/" (f elems)
+    let elems = S.split '/' (getPath action)
+        f     = takeWhile (\s -> s /= "info" && not ("git" `S.isPrefixOf` s)) . dropWhile (`elem` ["", "scm", "git"])
+    in Just $ '/' `S.cons` (S.intercalate "/" (f elems))
 
 

@@ -27,11 +27,11 @@ import           Text.Printf                      (printf)
 type Input = [L.ByteString]
 
 data Action = HttpAction {
-    getMethod :: S.ByteString
-  , getPath   :: S.ByteString
+    getMethod :: !S.ByteString
+  , getPath   :: !S.ByteString
 } | SshAction {
-    getMethod :: S.ByteString
-  , getPath   :: S.ByteString
+    getMethod :: !S.ByteString
+  , getPath   :: !S.ByteString
 } deriving (Show, Eq)
 
 data InOurOut = In | Out deriving (Show, Eq)
@@ -63,8 +63,6 @@ data LogLine = LogLine {
   , getRequestDuration :: Maybe Millis
   , getSessionId       :: S.ByteString
 } deriving (Show, Eq)
-
-
 
 data LogDate = LogDate {
     getYear    :: !Int
