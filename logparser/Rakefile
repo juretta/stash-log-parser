@@ -10,30 +10,6 @@ end
 
 ARTIFACTS=["dist/build/logparser/logparser"].freeze
 
-desc "Clean build artifacts"
-task :clean do
-  cabal 'clean'
-  `rm -f logparser-*.tar.gz`
-end
-
-desc "Create the logparser binary"
-task :build => [:setup, :clean, :compile]
-
-task :setup do
-  ["install --only-dependencies"].each do |cmd|
-    cabal cmd
-  end
-end
-
-task :compile do
-  %w(configure build).each do |cmd|
-    cabal cmd
-  end
-  ARTIFACTS.each do |file|
-    `strip #{file}`
-  end
-end
-
 desc "Build and package the logparser"
 task :package => :build do
   include FileUtils
@@ -74,11 +50,6 @@ end
 
 def version
   `git describe --tag --always`.strip
-end
-
-def cabal(cmd)
-  print `cabal #{cmd}`
-  raise "Failed to execute 'cabal #{cmd}'" unless $?.to_i.eql?(0)
 end
 
 def with_temp_dir(name)
