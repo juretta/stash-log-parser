@@ -7,6 +7,7 @@ module Stash.Log.Chart (
   , generateGitDurationChart
   , generateRequestClassificationChart
   , generateMaxConnectionChart
+  , generateProtocolStats
 ) where
 
 import           Control.Applicative
@@ -57,11 +58,18 @@ generateRequestClassificationChart fileName targetDir RequestClassification{..} 
 
 
 generateMaxConnectionChart :: String -> FilePath -> [DateValuePair] -> IO ()
-generateMaxConnectionChart fileName targetDir xs = renderChart targetDir fileName (stackedWithLinesChart "Conncurrent Connections" [] $ toLines xs)
+generateMaxConnectionChart fileName targetDir xs = renderChart targetDir fileName (stackedWithLinesChart "Conncurrent Connections" ([]::[Line Double]) $ toLines xs)
   where
-    toLines xs = [Line ALeft "max concurrent connections" (fmap (\DateValuePair{..} -> (toLocalTime getLogDate, fromIntegral getValue)) xs) blue]
+    toLines xs' = [Line ALeft "max concurrent connections" (fmap (\DateValuePair{..} -> (toLocalTime getLogDate, fromIntegral getValue)) xs') blue]
 
-
+generateProtocolStats :: String -> FilePath -> [ProtocolStats] -> IO ()
+generateProtocolStats fileName targetDir xs = renderChart targetDir fileName (linesChart "Git protocol usage" (toLines xs))
+  where
+    toLines :: [ProtocolStats] -> [Line Double]
+    toLines xs' = [
+        Line ALeft "http(s)" (fmap (\ProtocolStats{..} -> (toLocalTime getProtocolLogDate, fromIntegral getHttp)) xs') green
+      , Line ALeft "ssh" (fmap (\ProtocolStats{..} -> (toLocalTime getProtocolLogDate, fromIntegral getSsh)) xs') red
+      ]
 -- =================================================================================
 
 data OperationType = Clone | ShallowClone | Fetch | Push | RefAdvertisement deriving (Eq, Show)
@@ -171,7 +179,7 @@ pieChart values = toRenderable layout
                   $ def
 
     layout = pie_title .~ "Distribution of operations"
-           $ pie_plot . pie_data .~ map pitem values 
+           $ pie_plot . pie_data .~ map pitem values
            $ pie_plot . pie_colors  .~ fmap opaque colors
            $ pie_plot . pie_label_style .~ (font_size .~ 20 $ def)
            $ def
@@ -197,14 +205,30 @@ pointChart title lines' = do
            $ plot_points_title .~ title'
            $ def
 
+linesChart :: (PlotValue a) => String -> [Line a] -> Renderable ()
+linesChart title lines' = do
+    let plots = (\Line{..} -> toPlot $ single color lbl lineDataPoints) <$> lines' -- :: [(Plot LocalTime LogValue)]
+    toRenderable (layout plots)
+  where
+    single col title' dat = plot_lines_style .~ lineStyle col
+           $ plot_lines_values .~ [dat]
+           $ plot_lines_title .~ title'
+           $ def
 
--- stackedChart :: String -> [Line] -> Renderable ()
--- stackedChart title = stackedWithLinesChart title []
+    layout p = layout_title .~ title
+           $ layout_background .~ solidFillStyle (opaque white)
+           $ layout_plots .~ p
+           $ setLayoutForeground (opaque black)
+           $ def
 
-stackedWithLinesChart :: String -> [Line Double] -> [Line Double] -> Renderable ()
+    lineStyle col = line_width .~ 1
+              $ line_color .~ opaque col
+              $ def
+
+stackedWithLinesChart :: (Num a, PlotValue a) => String -> [Line a] -> [Line a] -> Renderable ()
 stackedWithLinesChart title singleLines' lines' = do
     let stacked  = toEither line <$> lines'
-        single'  = toEither single <$> singleLines' :: [Either (Plot LocalTime Double) (Plot LocalTime Double)]
+        single'  = toEither single <$> singleLines'
         xs       = single' ++ stacked
         hasRight = any isRight xs
     toRenderable (layout xs hasRight)
