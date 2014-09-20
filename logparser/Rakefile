@@ -12,6 +12,9 @@ ARTIFACTS=["dist/build/logparser/logparser"].freeze
 
 desc "Build and package the logparser"
 task :package do
+
+  `make package`
+  
   include FileUtils
   with_temp_dir "logparser" do |package_dir|
     cp "../README.md", package_dir

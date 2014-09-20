@@ -25,6 +25,10 @@ clean:
 setup: clean
 	cabal configure
 
+package: all
+	strip dist/build/logparser/logparser
+	upx dist/build/logparser/logparser
+
 profile: clean
 	cabal configure --enable-library-profiling --enable-executable-profiling --enable-benchmarks --flags=profiling
 	cabal build
