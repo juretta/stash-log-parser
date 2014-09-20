@@ -23,7 +23,7 @@ Run the following command pointing to the access logs of your Stash application:
 This will generate a graph that shows the various git operations (clone, fetch, push etc)
 captured in the access log files:
 
-![graph of git operations](https://lh5.googleusercontent.com/Idn9zbR-NK9ySiwEq3YPY1nx87RvA4SaqCNa1ksA5TAfF_5ktdGNE1vqzwHqzqg-9AR1Ll_w8as=w2560-h1318)
+![graph of git operations](https://dl.dropboxusercontent.com/u/5140190/screenshots/bitbucket.org/gitOperations-small.png)
 
 ### Download Binaries
 
