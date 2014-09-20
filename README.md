@@ -11,6 +11,7 @@ application. The main focus is on analyzing the git operations as they tend to d
 Install the logparser binary using Homebrew:
 
     $> brew tap juretta/binaries
+    $> brew update
     $> brew install stash-logparser
 
 This will make the `logparser` binary available in your `$PATH`.
