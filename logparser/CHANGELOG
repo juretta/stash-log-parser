@@ -1,0 +1,7 @@
+2.0
+===
+
+	* The logparser is now able to generate graphs without relying on 
+	  external applications like R or Gnuplot.
+	* The `requestClassification` command was added that generates a simple 
+	  summary of the types of requests found in the acces log files.

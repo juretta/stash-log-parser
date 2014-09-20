@@ -11,18 +11,16 @@ end
 ARTIFACTS=["dist/build/logparser/logparser"].freeze
 
 desc "Build and package the logparser"
-task :package => :build do
+task :package do
   include FileUtils
   with_temp_dir "logparser" do |package_dir|
     cp "../README.md", package_dir
-    %w(NOTICE LICENSE).each {|f| cp f, package_dir }
+    %w(NOTICE LICENSE CHANGELOG).each {|f| cp f, package_dir }
     bin_dir = File.join(package_dir, "bin")
     mkdir bin_dir
     ARTIFACTS.each do |file|
       cp file, bin_dir
     end
-    cp_r "../gnuplot", package_dir
-    cp Dir["../generate-access-log-graphs.sh"], package_dir
     sysinfo = SysInfo.new
     `tar zfc logparser-#{sysinfo.impl}-#{sysinfo.arch}-#{version}.tar.gz logparser`
   end
