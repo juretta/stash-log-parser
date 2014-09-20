@@ -2,20 +2,31 @@
 
 
 The log parser parses and aggregates the access logs of the Atlassian Stash web
-application. The main focus is on analyzing the git operations as the considerably dominate the overall performance of the application.
+application. The main focus is on analyzing the git operations as they tend to dominate the overall performance of the application.
 
 ## Installation
 
-### Mac OS X & Homebrew
+### Quickstart on Mac OS X with Homebrew
 
-You can install the logparser binary using Homebrew:
+Install the logparser binary using Homebrew:
 
     $> brew tap juretta/binaries
     $> brew install stash-logparser
 
+This will make the `logparser` binary available in your `$PATH`.
+
+Run the following command pointing to the access logs of your Stash application:
+
+    $> logparser gitOperations --graph ./path/to/atlassian-stash-access-2012-09-12*.log
+
+This will generate a graph that shows the various git operations (clone, fetch, push etc)
+captured in the access log files:
+
+![graph of git operations](https://lh5.googleusercontent.com/Idn9zbR-NK9ySiwEq3YPY1nx87RvA4SaqCNa1ksA5TAfF_5ktdGNE1vqzwHqzqg-9AR1Ll_w8as=w2560-h1318)
+
 ### Download Binaries
 
-Download the pre-built binaries for your platform from:
+There are pre-built binaries for Mac OS X and Linux that can be downloaded from:
 
 [https://bitbucket.org/ssaasen/stash-log-parser/downloads](https://bitbucket.org/ssaasen/stash-log-parser/downloads)
 
@@ -24,11 +35,20 @@ Download the pre-built binaries for your platform from:
 The `logparser` binary supports multiple commands and accepts one or more
 logfiles as arguments (either in uncompressed or compressed (bzip2) form).
 
-E.g.
+Executing `logparser` without any arguments or with the `--help` argument will
+show the help with a list of supported commands:
 
-    $> logparser gitOperations ./path/to/atlassian-stash-access-2012-09-12*.log
+    $ logparser --help
+    logparser 2.0
 
-Executing `logparser` will show the help with a list of supported commands.
+    logparser [COMMAND] ... [OPTIONS]
+      Logparser for the Atlassian Stash access logs
+
+    Commands:
+      maxConn                Show the maximum number of concurrent requests per
+                             hour
+      ...
+
 
 The logparser will parse, analyze and aggregate the log files. It can either print the
 aggregated records to STDOUT or it can generate graphs that show the aggregated results.
@@ -62,5 +82,5 @@ Access log format
 =================
 
 The access log format is documented here:
-https://confluence.atlassian.com/display/STASHKB/How+to+read+the+Stash+Log+Formats
+[How to read the Stash Log Formats](https://confluence.atlassian.com/display/STASHKB/How+to+read+the+Stash+Log+Formats)
 
