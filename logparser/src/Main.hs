@@ -90,8 +90,8 @@ allOps = All {files = def &= args, targetDir = outputDirFlag, aggregationLevel =
       &= name "all" &= help "Generate all available graphs for the given input files"
 
 mode :: Mode (CmdArgs LogParserRunMode)
-mode = cmdArgsMode $ modes [maxConn, countRequests, gitOperations, gitDurations, -- // chart generation is currently disabled as it is too slow
-                            protocolStats, repositoryStats, requestClassification, count, debugParser, allOps &= auto]
+mode = cmdArgsMode $ modes [maxConn, countRequests, gitOperations &= auto, gitDurations, -- // chart generation is currently disabled as it is too slow
+                            protocolStats, repositoryStats, requestClassification, count, allOps, debugParser]
         &= help appShortDesc
         &= helpArg [explicit, name "help", name "h"]
         &= program appName &= summary (appName ++ " " ++ appVersion)
@@ -115,6 +115,10 @@ run (RepositoryStats files' True targetDir')     = genRepositoryStatsGraph targe
 run (Count files')                               = printCountLines countLines files'
 run (DebugParser files')                         = stream showLines print files'
 run (All files' targetDir' lvl)                  = do
+
+  putStrLn "Starting to analyze the given access log(s)"
+  
+
   let actions = [genMaxConnectionChart
                 , genGitOperationsChart lvl
                 -- , genGitDurationChart
@@ -122,8 +126,9 @@ run (All files' targetDir' lvl)                  = do
                 , genProtocolStatsGraph,
                 genRepositoryStatsGraph]
   mapM_ (\action -> do
+        action targetDir' files'
         putStrLn "Generating next graph"
-        action targetDir' files') actions
+        ) actions
 
 genMaxConnectionChart :: [Char] -> [FilePath] -> IO ()
 genMaxConnectionChart targetDir' files' = do
