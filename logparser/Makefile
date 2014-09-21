@@ -6,9 +6,6 @@ default: all
 all: $(SOURCE)
 			cabal build
 
-test-setup:
-			cabal install --only-dependencies --enable-tests
-
 test-compile:
 			cabal clean
 			cabal configure --enable-tests
@@ -23,7 +20,14 @@ clean:
 	cabal clean
 
 setup: clean
+	cabal sandbox init
+	cabal install gtk2hs-buildtools
+	PKG_CONFIG_PATH=/opt/X11/lib/pkgconfig cabal install --only-dependencies --enable-tests
 	cabal configure
+
+
+dist-clean:
+		@rm -rf .cabal-sandbox cabal.sandbox.config
 
 package: all
 	strip dist/build/logparser/logparser
