@@ -8,6 +8,8 @@ application. The main focus is on analyzing the git operations as they tend to d
 
 ### Quickstart on Mac OS X with Homebrew
 
+_Before you start, please make sure you have [XQuartz](http://xquartz.macosforge.org/landing/) installed._
+
 Install the logparser binary using Homebrew:
 
     $> brew tap juretta/binaries
@@ -84,4 +86,3 @@ Access log format
 
 The access log format is documented here:
 [How to read the Stash Log Formats](https://confluence.atlassian.com/display/STASHKB/How+to+read+the+Stash+Log+Formats)
-
