@@ -1,5 +1,9 @@
 # Build
 
+This build requires
+[stack](https://github.com/commercialhaskell/stack#how-to-install) to be
+available.
+
 To build the logparser run `make setup` once to install the required dependencies:
 
     $> make setup
