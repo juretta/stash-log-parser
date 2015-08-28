@@ -12,7 +12,6 @@ module Stash.Log.Chart (
 ) where
 
 
-import           Control.Applicative
 import           Control.DeepSeq
 import           Control.Lens
 import qualified Data.ByteString.Char8                  as S
@@ -211,8 +210,8 @@ pointChart title lines' = do
     layout p = layout_title .~ title
            $ layout_background .~ solidFillStyle (opaque white)
            $ layout_left_axis_visibility . axis_show_ticks .~ True
+           $ layout_foreground .~ (opaque black) 
            $ layout_plots .~ p
-           $ setLayoutForeground (opaque black)
            $ def
 
     {-points :: Colour LogValue -> String -> Data LogValue -> PlotPoints LocalTime LogValue-}
@@ -234,7 +233,7 @@ linesChart title lines' = do
     layout p = layout_title .~ title
            $ layout_background .~ solidFillStyle (opaque white)
            $ layout_plots .~ p
-           $ setLayoutForeground (opaque black)
+           $ layout_foreground .~ (opaque black)
            $ def
 
     lineStyle col = line_width .~ 1
@@ -266,8 +265,8 @@ stackedWithLinesChart title singleLines' lines' = do
            $ layoutlr_right_axis_visibility . axis_show_line .~ showRight
            $ layoutlr_right_axis_visibility . axis_show_ticks .~ False
            $ layoutlr_right_axis_visibility . axis_show_labels .~ showRight
+           $ layoutlr_foreground .~ (opaque black)
            $ layoutlr_plots .~ p
-           $ setLayoutLRForeground (opaque black)
            $ def
 
     lineStyle col = line_width .~ 1
@@ -285,7 +284,7 @@ renderChart :: FilePath -> String -> Renderable a -> IO ()
 renderChart targetDir filename rend = do
     createDirectoryIfMissing True targetDir
     {-_ <- renderableToFile (FileOptions (1200,800) PNG) rend (targetDir </> filename ++ ".png")-}
-    _ <- renderableToFile (FileOptions (1200,800) PDF) rend (targetDir </> filename ++ ".pdf")
+    _ <- renderableToFile (FileOptions (1200,800) PDF) (targetDir </> filename ++ ".pdf") rend
     return ()
 
 

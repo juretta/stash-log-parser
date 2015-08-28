@@ -11,7 +11,6 @@ module Stash.Log.Parser
 , parseLogLines
 ) where
 
-import           Control.Applicative
 import           Data.Attoparsec.ByteString       (skip)
 import           Data.Attoparsec.ByteString.Char8 hiding (char, space, take,
                                                    takeWhile)

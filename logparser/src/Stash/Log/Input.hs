@@ -14,7 +14,6 @@ import qualified Codec.Compression.BZip     as BZip
 import           Control.Monad              (liftM)
 import qualified Data.ByteString.Lazy.Char8 as L
 import           Data.List                  (isSuffixOf, sortBy)
-import           Data.Monoid                (mappend)
 import           Data.String.Utils          (split)
 import           System.Path.NameManip
 

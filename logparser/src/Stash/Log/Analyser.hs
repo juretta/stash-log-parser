@@ -17,7 +17,6 @@ import qualified Data.ByteString.Lazy.Char8 as L
 import           Data.List                  (foldl')
 import           Stash.Log.Common
 import           Stash.Log.Parser
-import           Data.Monoid
 
 data DateValuePair = DateValuePair {
      getLogDate :: !LogDate

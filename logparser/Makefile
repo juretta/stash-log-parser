@@ -1,41 +1,31 @@
 SOURCE = $(shell find src -name '*.lhs' -o -name '*.hs')
-
+# perm only works on BSD
+# Use -executable on Linux
+BINARY = $(shell find .stack-work/install/ -name logparser -type f -perm +111)
 
 default: all
 
 all: $(SOURCE)
-			cabal build
+	PKG_CONFIG_PATH=/opt/X11/lib/pkgconfig stack build
 
-test-compile:
-			cabal clean
-			cabal configure --enable-tests
-			cabal build
+test:
+	stack test
 
-test: test-compile
-			cabal test --show-details=always
-
-doctest:
-			@(doctest -XOverloadedStrings $(SOURCE))
 clean:
-	cabal clean
+	stack clean
 
-setup: clean
-	cabal sandbox init
-	cabal install gtk2hs-buildtools
-	PKG_CONFIG_PATH=/opt/X11/lib/pkgconfig cabal install --only-dependencies --enable-tests
-	cabal configure
+setup: dist-clean
+	#cabal install gtk2hs-buildtools
+	stack setup
+	PKG_CONFIG_PATH=/opt/X11/lib/pkgconfig stack build
 
 
 dist-clean:
-		@rm -rf .cabal-sandbox cabal.sandbox.config
+		@rm -rf .cabal-sandbox cabal.sandbox.config .stack-work
 
 package: all
-	strip dist/build/logparser/logparser
-	upx dist/build/logparser/logparser
-
-profile: clean
-	cabal configure --enable-library-profiling --enable-executable-profiling --enable-benchmarks --flags=profiling
-	cabal build
+	strip $(BINARY)
+	upx $(BINARY)
 
 charts:
 	hp2ps -c -M logparser.hp
