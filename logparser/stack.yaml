@@ -1,0 +1,6 @@
+flags: {}
+packages:
+- '.'
+- location: vendor/zip-conduit
+  extra-dep: true
+resolver: lts-3.2

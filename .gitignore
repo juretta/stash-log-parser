@@ -3,3 +3,4 @@ data
 logparser/.cabal-sandbox
 logparser/cabal.sandbox.config
 tags
+.stack-work
