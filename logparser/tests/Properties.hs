@@ -106,17 +106,17 @@ test_logLineParseActionSsh = H.assertEqual
 test_extractActionSsh = H.assertEqual
     "Should parse the action correctly for ssh"
     (Just "/CONF/teamcal.git")
-    (extractRepoSlug $ getAction $ fromJust parsedLogLine3)
+    (extractRepoSlug =<< getAction <$> parsedLogLine3)
 
 test_extractActionHTTP = H.assertEqual
     "Should parse the action correctly for http"
     (Just "/ATLASSIAN/jira.git")
-    (extractRepoSlug $ getAction $ fromJust parsedLogLine)
+    (extractRepoSlug =<< getAction <$> parsedLogLine)
 
 test_extractActionHTTPUploadPack = H.assertEqual
     "Should parse the action correctly for an upload-pack operation via http"
     (Just "/testlab/point-jmeter.git")
-    (extractRepoSlug $ getAction $ fromJust parsedLogLine6)
+    (extractRepoSlug =<< getAction <$> parsedLogLine6)
 
 test_classifyRefAdv = H.assertBool
     "Should identify ref advertisement"
@@ -168,12 +168,12 @@ test_logLineParseLabelsCloneNew = H.assertBool
 test_logLineParseDuration = H.assertEqual
     "Should parse the duration correctly"
     (Just 117)
-    (getRequestDuration $ fromJust parsedLogLine3)
+    (getRequestDuration =<< parsedLogLine3)
 
 test_logLineParseDurationNothing = H.assertEqual
     "Should parse the duration correctly"
     Nothing
-    (getRequestDuration $ fromJust parsedLogLine4)
+    (getRequestDuration =<< parsedLogLine4)
 
 test_logLineParseRequestId = H.assertEqual
     "Should parse the request id"
@@ -198,7 +198,7 @@ test_logLineParseUsernameAsJust = H.assertEqual
 test_logLineParseUsernameAsNothing = H.assertEqual
     "Should parse a username"
     Nothing
-    (getUsername $ fromJust parsedLogLine2)
+    (getUsername =<< parsedLogLine2)
 
 ------------------------------------------------------------------------
 -- Analyser
