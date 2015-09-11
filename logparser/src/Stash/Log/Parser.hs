@@ -12,8 +12,7 @@ module Stash.Log.Parser
 ) where
 
 import           Data.Attoparsec.ByteString       (skip)
-import           Data.Attoparsec.ByteString.Char8 hiding (char, space, take,
-                                                   takeWhile)
+import           Data.Attoparsec.ByteString.Char8 hiding (char, space, take, takeWhile)
 import qualified Data.Attoparsec.Lazy             as AL
 import           Data.ByteString.Char8            (readInt, readInteger)
 import qualified Data.ByteString.Char8            as S
@@ -58,6 +57,9 @@ data LogLine = LogLine {
   , getDate            :: LogDate
   , getAction          :: Action
   , getDetails         :: S.ByteString
+  , getStatusCode      :: !Integer
+  , getBytesRead       :: !Integer
+  , getBytesWritten    :: !Integer
   , getLabels          :: [S.ByteString]
   , getRequestDuration :: Maybe Millis
   , getSessionId       :: S.ByteString
@@ -210,6 +212,16 @@ parseRequestId = do
                    }
     toInteger' = maybe 0 fst . readInteger
 
+parseStatusBytes :: Parser (Integer, Integer, Integer)
+parseStatusBytes = do
+    status <- decimal
+    separator
+    bread <- decimal
+    separator
+    bwritten <- decimal
+    separator
+    return (status, bread, bwritten)
+
 separator :: Parser ()
 separator = do
     space
@@ -224,8 +236,6 @@ parseAction :: Parser Action
 parseAction = choice [parseSshAction, parseHttpAction]
 
 
-
-
 parseSshAction :: Parser Action
 parseSshAction = do
     method <- takeTill (== '\'')
@@ -233,7 +243,6 @@ parseSshAction = do
     path <- takeTill (== '\'')
     single
     return $ SshAction method path
-
 
 
 parseHttpAction :: Parser Action
@@ -261,13 +270,14 @@ parseLine = do
     action <- parseAction
     separator
     details <- logEntry
+    (status, bytesRead, bytesWritten)  <- option (0,0,0) parseStatusBytes
     labels_ <- logEntry
     duration <- parseDuration
     sessionId <- logEntry
     let labels = trim <$> S.split ',' labels_
         username = if rawUsername == "-" then Nothing else Just rawUsername
     return $ LogLine remoteAddress protocol requestId username date
-                    action details labels (Millis <$> duration) sessionId
+                    action details status bytesRead bytesWritten labels (Millis <$> duration) sessionId
 
 -- | Remove leading and trailing whitespace
 --

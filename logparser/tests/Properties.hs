@@ -68,6 +68,13 @@ parsedLogLineShallowCloneLabelNew = parseLogLine inputLine
 parsedLogLineShallowCloneLabelOld = parseLogLine inputLine
     where inputLine = "23.23.30.99,172.24.4.5,127.0.0.1 | https | o1439x1423920x69 | bamboo_user | 2013-08-22 23:59:57,763 | \"POST /scm/JIRA/servicedesk.git/git-upload-pack HTTP/1.1\" | \"\" \"git/1.7.9.5\" | shallow clone, cache:hit | 70 | q09lhc | "
 
+-- In 4.0 the following fields were introduced:
+--
+-- status code
+-- bytes-read
+-- bytes-written
+parsedLogLineVersion400 = parseLogLine inputLine
+    where inputLine = "172.24.36.105 | ssh | o@18PRGAUx78x41986x36 | ssaasen | 2015-09-09 01:18:58,348 | SSH - git-upload-pack '/foo/bar.git' | - | 200 | 4 | 9828 | cache:miss, refs, ssh:user:id:3614 | 252 | 47dr15 | "
 
 test_parseLogEntryDate = H.assertEqual
     "Should parse the date correctly"
@@ -199,6 +206,26 @@ test_logLineParseUsernameAsNothing = H.assertEqual
     "Should parse a username"
     Nothing
     (getUsername =<< parsedLogLine2)
+
+test_parseV400LogLineStatus = H.assertEqual
+    "Should parse the status code"
+    (Just 200)
+    (getStatusCode <$> parsedLogLineVersion400)
+
+test_parseV400LogLineBytesRead = H.assertEqual
+    "Should parse the bytes read"
+    (Just 4)
+    (getBytesRead <$> parsedLogLineVersion400)
+
+test_parseV400LogLineBytesWritten = H.assertEqual
+    "Should parse the bytes written"
+    (Just 9828)
+    (getBytesWritten <$> parsedLogLineVersion400)
+
+test_parseV400Username = H.assertEqual
+    "Should parse a username"
+    (Just "ssaasen")
+    (getUsername =<< parsedLogLineVersion400)
 
 ------------------------------------------------------------------------
 -- Analyser
@@ -346,5 +373,9 @@ tests =
         ,testCase "parser/extract Action HTTP" test_extractActionHTTP
         ,testCase "parser/extract Action HTTP (upload-pack)" test_extractActionHTTPUploadPack
         ,testCase "parser/extract Action SSH" test_extractActionSsh
+        ,testCase "parser/extract 4.0.0 status code" test_parseV400LogLineStatus
+        ,testCase "parser/extract 4.0.0 bytes read" test_parseV400LogLineBytesRead
+        ,testCase "parser/extract 4.0.0 bytes written" test_parseV400LogLineBytesWritten
+        ,testCase "parser/extract 4.0.0 username" test_parseV400Username
       ]
     ]
