@@ -1,8 +1,9 @@
-# Atlassian Stash access log parser
+# Atlassian Stash and Bitbucket Server access log parser
 
 
-The log parser parses and aggregates the access logs of the Atlassian Stash web
-application. The main focus is on analyzing the git operations as they tend to dominate the overall performance of the application.
+The log parser parses and aggregates the access logs of the Atlassian
+Stash/Bitbucket Server web application. The main focus is on analyzing 
+the git operations as they tend to dominate the overall performance of the application.
 
 ## Installation
 
@@ -18,9 +19,9 @@ Install the logparser binary using Homebrew:
 
 This will make the `logparser` binary available in your `$PATH`.
 
-Run the following command pointing to the access logs of your Stash application:
+Run the following command pointing to the access logs of your application:
 
-    $> logparser gitOperations --graph ./path/to/atlassian-stash-access-2012-09-12*.log
+    $> logparser gitOperations --graph ./path/to/atlassian-(stash-access-2012-09-12*.log
 
 This will generate a graph that shows the various git operations (clone, fetch, push etc)
 captured in the access log files:
@@ -42,10 +43,10 @@ Executing `logparser` without any arguments or with the `--help` argument will
 show the help with a list of supported commands:
 
     $ logparser --help
-    logparser 2.0
+    logparser 3.0
 
     logparser [COMMAND] ... [OPTIONS]
-      Logparser for the Atlassian Stash access logs
+      Logparser for the Atlassian Stash/Bitbucket Server access logs
 
     Commands:
       maxConn                Show the maximum number of concurrent requests per

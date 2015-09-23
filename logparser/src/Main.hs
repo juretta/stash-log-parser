@@ -20,10 +20,10 @@ appName :: String
 appName = "logparser"
 
 appVersion :: String
-appVersion = "2.0"
+appVersion = "3.0"
 
 appShortDesc :: String
-appShortDesc = "Logparser for the Atlassian Stash access logs"
+appShortDesc = "Logparser for the Atlassian Stash & Bitbucket Server access logs"
 
 data LogParserRunMode =
                   MaxConn           {files :: [FilePath], graph :: Bool, targetDir :: FilePath}
