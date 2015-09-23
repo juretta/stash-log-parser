@@ -1,5 +1,6 @@
 require 'fileutils'
 require 'rubygems'
+require 'rake'
 
 begin
   require 'sysinfo'
@@ -8,7 +9,7 @@ rescue LoadError
   exit -1
 end
 
-ARTIFACTS=["dist/build/logparser/logparser"].freeze
+ARTIFACTS=Rake::FileList[".stack-work/install/x86_64-osx/lts-3.2/*/bin/*"]
 
 desc "Build and package the logparser"
 task :package do
@@ -25,7 +26,9 @@ task :package do
       cp file, bin_dir
     end
     sysinfo = SysInfo.new
-    `tar zfc logparser-#{sysinfo.impl}-#{sysinfo.arch}-#{version}.tar.gz logparser`
+    archive="logparser-#{sysinfo.impl}-#{sysinfo.arch}-#{version}.tar.gz"
+    `tar zfc #{archive} logparser`
+    `openssl dgst -sha1 #{archive} | awk -F'= ' '{print $2}' > #{archive}.sha1`
   end
 end
 
